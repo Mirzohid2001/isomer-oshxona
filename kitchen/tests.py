@@ -24,9 +24,29 @@ from kitchen.models import (
 )
 from kitchen.services.approvals import receive_purchase_order, review_change_request, submit_waste_request
 from kitchen.services.cook import cancel_cook_batch, cook_recipe, queue_cook, start_queued_cook
+from kitchen.services.nutrition_lookup import lookup_local, suggest_nutrition
 from kitchen.services.precision import money, qty, weighted_avg
 from kitchen.services.recipe_cost import recipe_nutrition
 from kitchen.services.stock import StockError, receive_stock
+
+
+class NutritionLookupTests(TestCase):
+    def test_guruch_local(self):
+        data = suggest_nutrition('Guruch')
+        self.assertTrue(data['found'])
+        self.assertEqual(data['source'], 'local')
+        self.assertEqual(data['unit'], 'kg')
+        self.assertGreater(data['kcal_per_unit'], 3000)
+        self.assertGreater(data['carbs'], 700)
+
+    def test_sut_suggests_liter(self):
+        data = lookup_local('Sut')
+        self.assertIsNotNone(data)
+        self.assertEqual(data['unit'], 'l')
+
+    def test_unknown_without_ai(self):
+        data = suggest_nutrition('xyzzy-noma-mahsulot-999')
+        self.assertFalse(data['found'])
 
 
 class PrecisionTests(TestCase):
@@ -351,6 +371,13 @@ class ViewSmokeTests(TestCase):
     def test_shopping_bad_date_safe(self):
         resp = self.client.get(reverse('shopping_list'), {'date': 'not-a-date'})
         self.assertEqual(resp.status_code, 200)
+
+    def test_nutrition_suggest_api(self):
+        resp = self.client.get(reverse('product_nutrition_suggest'), {'name': 'Kartoshka'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['found'])
+        self.assertIn('kcal_per_unit', data)
 
 
 class NavAlertsCacheTests(TestCase):

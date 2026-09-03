@@ -1,12 +1,23 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from kitchen.forms import CategoryForm, ProductForm, SupplierForm
 from kitchen.models import Category, Product, Supplier
 from kitchen.services import log_action
+from kitchen.services.nutrition_lookup import suggest_nutrition
 from kitchen.utils import paginate
+
+
+@login_required
+@require_GET
+def product_nutrition_suggest(request):
+    name = (request.GET.get('name') or '').strip()
+    unit = (request.GET.get('unit') or '').strip() or None
+    data = suggest_nutrition(name, unit=unit)
+    return JsonResponse(data)
 
 
 @login_required

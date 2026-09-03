@@ -85,6 +85,10 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
+# Ixtiyoriy: noma’lum mahsulotlar uchun AI (bo‘sh bo‘lsa faqat lokal baza ishlaydi)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+
 try:
     if os.environ.get("RIVOJ_ENV") != "production":
         from .settings_dev import *

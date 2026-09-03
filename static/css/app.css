@@ -2058,6 +2058,30 @@ table.data tbody tr:last-child td {
   color: var(--muted);
 }
 
+.field-help.is-ok {
+  color: var(--ok);
+}
+
+.field-help.is-warn {
+  color: var(--warn);
+}
+
+.field-with-action {
+  display: flex;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.field-with-action .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-with-action .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .field-error,
 .flash-spaced {
   margin-top: 0.4rem;

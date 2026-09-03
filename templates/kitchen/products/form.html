@@ -5,14 +5,24 @@
 {% block content %}
 <div class="panel panel-limited-md">
   <div class="panel-body">
-    <form method="post">
+    <form method="post" id="product-form">
       {% csrf_token %}
       <div class="form-grid">
         {% for field in form %}
-        <div class="form-field {% if field.name == 'allergens' or field.name == 'is_active' %}full{% endif %}">
+        <div class="form-field {% if field.name == 'allergens' or field.name == 'is_active' %}full{% endif %} {% if field.name == 'name' %}full{% endif %}">
           <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {% if field.name == 'name' %}
+          <div class="field-with-action">
+            {{ field }}
+            <button class="btn btn-ghost btn-sm" type="button" id="btn-nutrition-fill" title="Nom bo‘yicha kkal/oqsil/yog‘/uglevod">
+              Avto to‘ldirish
+            </button>
+          </div>
+          <div class="field-help" id="nutrition-hint">Nomni yozib «Avto to‘ldirish» bosing — kkal, oqsil, yog‘, uglevod avtomatik chiqadi.</div>
+          {% else %}
           {{ field }}
           {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+          {% endif %}
           {% if field.errors %}<div class="flash flash-error field-error">{{ field.errors|striptags }}</div>{% endif %}
         </div>
         {% endfor %}
@@ -24,4 +34,64 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const btn = document.getElementById('btn-nutrition-fill');
+  const hint = document.getElementById('nutrition-hint');
+  if (!btn) return;
+
+  function setVal(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  btn.addEventListener('click', async function () {
+    const name = (document.getElementById('id_name') || {}).value || '';
+    const unit = (document.getElementById('id_unit') || {}).value || '';
+    if (!name.trim()) {
+      hint.textContent = 'Avval mahsulot nomini yozing.';
+      hint.classList.add('is-warn');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Qidirilmoqda…';
+    hint.classList.remove('is-warn', 'is-ok');
+    try {
+      const url = '{% url "product_nutrition_suggest" %}?name=' + encodeURIComponent(name) + '&unit=' + encodeURIComponent(unit);
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const data = await resp.json();
+      if (!data.found) {
+        hint.textContent = data.note || 'Topilmadi.';
+        hint.classList.add('is-warn');
+        return;
+      }
+      setVal('id_kcal_per_unit', data.kcal_per_unit);
+      setVal('id_protein', data.protein);
+      setVal('id_fat', data.fat);
+      setVal('id_carbs', data.carbs);
+      if (data.allergens) setVal('id_allergens', data.allergens);
+      if (data.suggested_unit) {
+        const u = document.getElementById('id_unit');
+        if (u) {
+          u.value = data.suggested_unit;
+          u.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      const src = data.source === 'ai' ? 'AI' : 'baza';
+      hint.textContent = (data.note || 'To‘ldirildi') + ' · manba: ' + src;
+      hint.classList.add('is-ok');
+    } catch (e) {
+      hint.textContent = 'Xatolik: qayta urinib ko‘ring.';
+      hint.classList.add('is-warn');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Avto to‘ldirish';
+    }
+  });
+})();
+</script>
 {% endblock %}
