@@ -211,7 +211,7 @@ def _lookup_gemini(name: str, unit: str | None = None) -> dict | None:
         return None
 
     unit = unit or 'kg'
-    model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.0-flash') or 'gemini-2.0-flash'
+    model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash-lite') or 'gemini-2.5-flash-lite'
     url = (
         f'https://generativelanguage.googleapis.com/v1beta/models/'
         f'{model}:generateContent?key={api_key.strip()}'
