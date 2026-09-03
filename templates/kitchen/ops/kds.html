@@ -14,6 +14,7 @@
           <div class="form-field {% if field.name == 'note' %}full{% endif %}">
             <label>{{ field.label }}</label>
             {{ field }}
+            {% include "kitchen/partials/field_errors.html" %}
           </div>
           {% endfor %}
         </div>
@@ -28,10 +29,21 @@
     <div class="panel-body">
       {% for b in queued %}
       <div class="alert-row">
-        <span><strong>{{ b.recipe.name }}</strong> × {{ b.portions }}{% if b.shift %} · smena {{ b.shift }}{% endif %}</span>
-        <form method="post" action="{% url 'kds_start' b.pk %}">{% csrf_token %}
-          <button class="btn btn-sm" type="submit">Boshlash</button>
-        </form>
+        <span><strong>{{ b.recipe.name }}</strong> × {{ b.portions }}{% if b.shift %} · smena {{ b.shift }}{% endif %}
+          <span class="muted-note">ombor rezervlangan</span>
+        </span>
+        <div class="toolbar-actions">
+          {% if b.status == 'queued' %}
+          <form method="post" action="{% url 'kds_start' b.pk %}">{% csrf_token %}
+            <button class="btn btn-sm" type="submit">Boshlash</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'cook_cancel' b.pk %}" onsubmit="return confirm('Navbat bekor qilinsinmi? Rezerv qaytadi.')">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'kds_board' %}">
+            <button class="btn btn-sm btn-danger" type="submit">Bekor</button>
+          </form>
+        </div>
       </div>
       {% empty %}
       <p class="empty">Navbat bo‘sh</p>

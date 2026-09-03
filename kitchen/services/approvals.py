@@ -19,6 +19,7 @@ def submit_adjust_request(*, product, new_quantity, user, note=''):
         product=product,
         quantity=abs(new_quantity - product.quantity),
         new_quantity=new_quantity,
+        requested_from_quantity=product.quantity,
         note=note,
         requested_by=user,
     )
@@ -58,6 +59,12 @@ def review_change_request(*, request_obj, reviewer, approve=True):
         return req
 
     if req.request_type == StockChangeRequest.RequestType.ADJUST:
+        req.product.refresh_from_db(fields=['quantity'])
+        if req.requested_from_quantity is not None and req.product.quantity != req.requested_from_quantity:
+            raise StockError(
+                f"So‘rov eskirgan: hozirgi qoldiq {req.product.quantity} {req.product.unit}, "
+                f"so‘rov paytida {req.requested_from_quantity} edi."
+            )
         adjust_stock(
             product=req.product,
             new_quantity=req.new_quantity,
@@ -80,6 +87,8 @@ def review_change_request(*, request_obj, reviewer, approve=True):
 @transaction.atomic
 def receive_purchase_order(*, order, user=None):
     order = PurchaseOrder.objects.select_for_update().prefetch_related('lines__product').get(pk=order.pk)
+    if order.status == PurchaseOrder.Status.DRAFT:
+        raise StockError('Avval buyurtmani "Buyurtma" holatiga o‘tkazing.')
     if order.status == PurchaseOrder.Status.RECEIVED:
         raise StockError('Buyurtma allaqachon qabul qilingan.')
     if order.status == PurchaseOrder.Status.CANCELLED:

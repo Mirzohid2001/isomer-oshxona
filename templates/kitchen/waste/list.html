@@ -11,18 +11,20 @@
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>Summa</th><th>Sabab</th></tr></thead>
+      <thead><tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>O‘rtacha narx</th><th>Summa</th><th>Sabab</th><th></th></tr></thead>
       <tbody>
         {% for m in movements %}
         <tr>
           <td>{{ m.created_at|date:"d.m.Y H:i" }}</td>
           <td>{{ m.product.name }}</td>
           <td>{{ m.quantity }} {{ m.product.unit }}</td>
+          <td>{{ m.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.total_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.note }}</td>
+          <td><a class="btn btn-ghost btn-sm" href="{% url 'movement_detail' m.pk %}">Partiyalar</a></td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="empty">Yozuv yo‘q</td></tr>
+        <tr><td colspan="7" class="empty">Yozuv yo‘q</td></tr>
         {% endfor %}
       </tbody>
     </table>

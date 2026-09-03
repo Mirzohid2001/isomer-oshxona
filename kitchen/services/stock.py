@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.db.models import F, Sum
 from django.utils import timezone
@@ -11,7 +13,7 @@ from kitchen.models import (
 )
 from kitchen.services.audit import log_action
 from kitchen.services.notifications import bump_notification_cache
-from kitchen.services.precision import money, qty, weighted_avg
+from kitchen.services.precision import as_decimal, money, qty, weighted_avg
 
 
 class StockError(Exception):
@@ -34,36 +36,126 @@ def _sync_product_expiry(product):
         product.save(update_fields=['expiry_date'])
 
 
-def _fefo_lots_qs(product):
-    return (
-        StockLot.objects.select_for_update()
-        .filter(product=product, quantity__gt=0)
-        .order_by(F('expiry_date').asc(nulls_last=True), 'received_at', 'id')
-    )
+def _fefo_lots_qs(product, location=None):
+    qs = StockLot.objects.select_for_update().filter(product=product, quantity__gt=0)
+    if location is not None:
+        qs = qs.filter(location=location)
+    return qs.order_by(F('expiry_date').asc(nulls_last=True), 'received_at', 'id')
 
 
-def _ensure_lot_cover(product, need):
-    """Agar product.quantity > lot sum — yetishmaganini FEFO oxiriga qo‘shadi."""
-    lot_sum = qty(
-        StockLot.objects.filter(product=product, quantity__gt=0).aggregate(s=Sum('quantity'))['s']
-        or 0
-    )
+def _lot_cover_qty(product, location=None):
+    qs = StockLot.objects.filter(product=product, quantity__gt=0)
+    if location is not None:
+        qs = qs.filter(location=location)
+    return qty(qs.aggregate(s=Sum('quantity'))['s'] or 0)
+
+
+def _assert_lot_cover(product, need, location=None):
+    """Partiya yig‘indisi yetmasa — sun’iy lot yaratmaydi, audit uchun xato beradi."""
+    lot_sum = _lot_cover_qty(product, location=location)
     gap = qty(need - lot_sum)
     if gap > 0:
-        StockLot.objects.create(
-            product=product,
-            location=product.default_location,
-            quantity=gap,
-            unit_cost=money(product.avg_cost),
-            expiry_date=product.expiry_date,
-            note='Avto-partiya (sync)',
+        loc_name = getattr(location, 'name', None)
+        raise StockError(
+            f'{product.name}: partiyalar qoldiq bilan mos emas'
+            f"{f' ({loc_name})' if loc_name else ''} "
+            f'(partiyada {lot_sum} {product.unit}, kerak {need}). '
+            f'Avval partiyalarni sinxronlang.'
         )
 
 
-def _allocate_from_lots(*, product, quantity, movement):
+def _sync_product_avg_from_lots(product):
+    """Qolgan partiyalar tannarxidan Product.avg_cost ni qayta hisoblaydi."""
+    lots = StockLot.objects.filter(product=product, quantity__gt=0).only('quantity', 'unit_cost')
+    total_qty = qty(0)
+    total_val = Decimal('0')
+    for lot in lots:
+        lot_qty = qty(lot.quantity)
+        total_qty = qty(total_qty + lot_qty)
+        total_val += lot_qty * as_decimal(lot.unit_cost)
+    if total_qty <= 0:
+        return
+    new_avg = money(total_val / total_qty)
+    if product.avg_cost != new_avg:
+        product.avg_cost = new_avg
+        product.save(update_fields=['avg_cost'])
+
+
+def preview_fefo_allocation(product, quantity, location=None):
+    """Rasxod qilmasdan FEFO bo‘yicha qaysi partiyadan qancha ketishini ko‘rsatadi."""
+    quantity = qty(quantity)
+    if quantity <= 0:
+        return {
+            'quantity': quantity,
+            'lines': [],
+            'total_cost': money(0),
+            'avg_unit_cost': money(0),
+            'covered': qty(0),
+            'missing': qty(0),
+        }
+
+    loc = location if location is not None else product.default_location
+    remaining = quantity
+    lines = []
+    qs = StockLot.objects.filter(product=product, quantity__gt=0)
+    if loc is not None:
+        qs = qs.filter(location=loc)
+    qs = qs.order_by(F('expiry_date').asc(nulls_last=True), 'received_at', 'id')
+
+    for lot in qs:
+        if remaining <= 0:
+            break
+        take = qty(min(lot.quantity, remaining))
+        if take <= 0:
+            continue
+        lines.append(
+            {
+                'lot': lot,
+                'lot_id': lot.pk,
+                'quantity': take,
+                'unit_cost': money(lot.unit_cost),
+                'line_cost': money(take * lot.unit_cost),
+                'expiry_date': lot.expiry_date,
+                'synthetic': False,
+            }
+        )
+        remaining = qty(remaining - take)
+
+    covered = qty(quantity - remaining)
+    total = sum((row['line_cost'] for row in lines), money(0))
+    denom = covered if covered > 0 else quantity
+    return {
+        'quantity': quantity,
+        'lines': lines,
+        'total_cost': money(total),
+        'avg_unit_cost': money(total / denom) if denom else money(0),
+        'covered': covered,
+        'missing': remaining,
+        'mixed': len([row for row in lines if row['quantity'] > 0]) > 1,
+    }
+
+
+def allocation_rows_from_movement(movement):
+    rows = []
+    for alloc in movement.lot_allocations.select_related('lot').all():
+        rows.append(
+            {
+                'lot': alloc.lot,
+                'lot_id': alloc.lot_id,
+                'quantity': qty(alloc.quantity),
+                'unit_cost': money(alloc.unit_cost),
+                'line_cost': money(alloc.quantity * alloc.unit_cost),
+                'expiry_date': alloc.lot.expiry_date if alloc.lot else None,
+                'synthetic': False,
+            }
+        )
+    return rows
+
+
+def _allocate_from_lots(*, product, quantity, movement, location=None):
     remaining = qty(quantity)
     allocations = []
-    for lot in _fefo_lots_qs(product):
+    for lot in _fefo_lots_qs(product, location=location):
         if remaining <= 0:
             break
         take = qty(min(lot.quantity, remaining))
@@ -81,8 +173,11 @@ def _allocate_from_lots(*, product, quantity, movement):
         )
         remaining = qty(remaining - take)
     if remaining > 0:
+        loc_name = getattr(location, 'name', None)
         raise StockError(
-            f'{product.name}: partiyalarda yetarli emas (yetishmaydi {remaining} {product.unit}).'
+            f'{product.name}: partiyalarda yetarli emas'
+            f"{f' ({loc_name})' if loc_name else ''} "
+            f'(yetishmaydi {remaining} {product.unit}).'
         )
     StockLotAllocation.objects.bulk_create(allocations)
     return allocations
@@ -171,7 +266,8 @@ def consume_stock(
             f'{product.name}: yetarli emas (qoldiq {have} {product.unit}, kerak {quantity}).'
         )
 
-    _ensure_lot_cover(product, quantity)
+    movement_location = location or product.default_location
+    _assert_lot_cover(product, quantity, location=movement_location)
 
     movement = StockMovement.objects.create(
         movement_type=movement_type,
@@ -182,10 +278,15 @@ def consume_stock(
         note=note,
         cook_batch=cook_batch,
         created_by=user,
-        location=location or product.default_location,
+        location=movement_location,
     )
     try:
-        allocations = _allocate_from_lots(product=product, quantity=quantity, movement=movement)
+        allocations = _allocate_from_lots(
+            product=product,
+            quantity=quantity,
+            movement=movement,
+            location=movement_location,
+        )
     except StockError:
         if not allow_negative:
             raise
@@ -199,6 +300,7 @@ def consume_stock(
 
     product.quantity = qty(max(have - quantity, 0))
     product.save(update_fields=['quantity'])
+    _sync_product_avg_from_lots(product)
     _sync_product_expiry(product)
     _after_stock_change()
     return movement
@@ -292,6 +394,7 @@ def restore_stock(*, product, quantity, unit_cost, user=None, note='', cook_batc
             source_movement=movement,
             note=note or 'Qaytarish',
         )
+    _sync_product_avg_from_lots(product)
     _sync_product_expiry(product)
     _after_stock_change()
     return movement

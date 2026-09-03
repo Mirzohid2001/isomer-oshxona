@@ -8,8 +8,8 @@
   <div class="toolbar-actions">
   <a class="btn" href="{% url 'cook_pdf' batch.pk %}">PDF</a>
   <a class="btn btn-ghost" href="{% url 'cook_print' batch.pk %}">Chop etish</a>
-  {% if batch.status == 'done' and user.is_staff %}
-  <form method="post" action="{% url 'cook_cancel' batch.pk %}" onsubmit="return confirm('Bekor qilinsinmi? Mahsulotlar qaytariladi.')">
+  {% if batch.status == 'queued' or batch.status == 'cooking' or batch.status == 'done' and user.is_staff %}
+  <form method="post" action="{% url 'cook_cancel' batch.pk %}" onsubmit="return confirm('Bekor qilinsinmi? Rezerv qilingan mahsulotlar qaytariladi.')">
     {% csrf_token %}
     <button class="btn btn-danger" type="submit">Bekor qilish</button>
   </form>
@@ -23,19 +23,35 @@
   <div class="stat"><div class="stat-label">BJU</div><div class="stat-value stat-value-sm">{{ batch.protein_per_portion|floatformat:1 }}/{{ batch.fat_per_portion|floatformat:1 }}/{{ batch.carbs_per_portion|floatformat:1 }}</div></div>
 </div>
 <div class="panel">
-  <div class="panel-head"><h3>Rasxod qilingan mahsulotlar</h3></div>
+  <div class="panel-head">
+    <h3>Rasxod qilingan mahsulotlar</h3>
+    <span class="muted-note">FEFO — har bir qator o‘rtacha narx; aralash bo‘lsa partiyalar ochiladi</span>
+  </div>
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Summa</th></tr></thead>
+      <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>O‘rtacha narx</th><th>Summa</th><th></th></tr></thead>
       <tbody>
-        {% for item in batch.items.all %}
+        {% for row in item_rows %}
+        {% with item=row.item %}
         <tr>
-          <td>{{ item.product.name }}</td>
+          <td>
+            {{ item.product.name }}
+            {% if row.mixed %}<span class="badge badge-warn badge-inline">Aralash</span>{% endif %}
+          </td>
           <td>{{ item.quantity }} {{ item.product.unit }}</td>
           <td>{{ item.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ item.line_cost|floatformat:0|intcomma }}</td>
+          <td>{% if row.movement_id %}<a class="btn btn-ghost btn-sm" href="{% url 'movement_detail' row.movement_id %}">Partiyalar</a>{% endif %}</td>
         </tr>
+        {% if row.allocations and row.mixed %}
+        <tr class="alloc-subrow">
+          <td colspan="5">
+            {% include "kitchen/partials/allocation_table.html" with allocations=row.allocations unit=item.product.unit show_expiry=True total_cost=item.line_cost avg_unit_cost=item.unit_cost %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endwith %}
         {% endfor %}
       </tbody>
     </table>

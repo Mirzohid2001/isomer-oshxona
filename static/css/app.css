@@ -2150,6 +2150,83 @@ table.data tbody tr:last-child td {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.alloc-panel {
+  margin-top: 0.35rem;
+}
+
+.alloc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.alloc-subrow > td {
+  background: rgba(31, 92, 72, 0.04);
+  padding-top: 0.35rem;
+  padding-bottom: 0.85rem;
+}
+
+.alloc-subrow .alloc-panel {
+  margin: 0;
+}
+
+.badge-inline {
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.data-compact th,
+.data-compact td {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 720px) {
+  .formset-table thead {
+    display: none;
+  }
+
+  .formset-table,
+  .formset-table tbody,
+  .formset-table tr,
+  .formset-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .formset-table tr {
+    margin-bottom: 0.85rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid rgba(21, 36, 28, 0.1);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .formset-table td {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.4rem 0;
+    border: 0;
+  }
+
+  .formset-table td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .formset-table .form-input,
+  .formset-table .form-select {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

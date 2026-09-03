@@ -2,15 +2,15 @@ from calendar import monthrange
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Count, F, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
-from kitchen.models import CookBatch, MovementType, Product, Recipe, StockMovement
+from kitchen.models import CookBatch, MovementType, Product, Recipe, StockLot, StockMovement
 from kitchen.services.budget import budget_status
 from kitchen.services.precision import money, qty
 from kitchen.services.recipe_cost import recipe_nutrition
-from kitchen.utils import parse_date
+from kitchen.utils import local_date_span_bounds, parse_date
 
 
 MONTH_NAMES = {
@@ -55,37 +55,41 @@ def _prev_period(mode, start, end):
 
 
 def _cook_qs(start, end):
+    start_dt, end_dt = local_date_span_bounds(start, end)
     return CookBatch.objects.filter(
-        cooked_at__date__gte=start,
-        cooked_at__date__lte=end,
+        cooked_at__gte=start_dt,
+        cooked_at__lt=end_dt,
         status=CookBatch.Status.DONE,
     )
 
 
 def _out_qs(start, end):
+    start_dt, end_dt = local_date_span_bounds(start, end)
     return (
         StockMovement.objects.filter(
             movement_type=MovementType.OUT,
-            created_at__date__gte=start,
-            created_at__date__lte=end,
+            created_at__gte=start_dt,
+            created_at__lt=end_dt,
         ).exclude(cook_batch__status=CookBatch.Status.CANCELLED)
     )
 
 
 def _in_qs(start, end):
+    start_dt, end_dt = local_date_span_bounds(start, end)
     return StockMovement.objects.filter(
         movement_type=MovementType.IN,
-        created_at__date__gte=start,
-        created_at__date__lte=end,
+        created_at__gte=start_dt,
+        created_at__lt=end_dt,
         cook_batch__isnull=True,
     )
 
 
 def _waste_qs(start, end):
+    start_dt, end_dt = local_date_span_bounds(start, end)
     return StockMovement.objects.filter(
         movement_type=MovementType.WASTE,
-        created_at__date__gte=start,
-        created_at__date__lte=end,
+        created_at__gte=start_dt,
+        created_at__lt=end_dt,
     )
 
 
@@ -264,10 +268,16 @@ def recipe_catalog_costs(limit=10):
 
 def stock_snapshot():
     products = Product.objects.filter(is_active=True).only('quantity', 'avg_cost', 'min_stock')
+    lot_totals = {
+        row['product_id']: money(row['total'] or 0)
+        for row in StockLot.objects.filter(quantity__gt=0)
+        .values('product_id')
+        .annotate(total=Sum(F('quantity') * F('unit_cost')))
+    }
     value = money(0)
     low = 0
     for p in products:
-        value = money(value + p.quantity * p.avg_cost)
+        value = money(value + lot_totals.get(p.pk, money(0)))
         if p.quantity <= p.min_stock:
             low += 1
     return {'value': value, 'low_count': low, 'sku_count': products.count()}
@@ -311,6 +321,6 @@ def build_analytics(mode='month', year=None, month=None, day=None):
         'waste_rows': waste_stats(start, end),
         'catalog_costly': recipe_catalog_costs(),
         'stock': stock,
-        'budget': budget_status(year, month) if mode == 'month' else budget_status(),
+        'budget': budget_status(start.year, start.month),
         'month_name': MONTH_NAMES.get(month, month),
     }

@@ -7,23 +7,30 @@
   <div class="panel-body">
     <form method="post">
       {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="flash flash-error flash-spaced">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if formset.non_form_errors %}
+      <div class="flash flash-error flash-spaced">{{ formset.non_form_errors }}</div>
+      {% endif %}
       <div class="form-field form-field-medium">
         <label>{{ form.name.label }}</label>
         {{ form.name }}
+        {% include "kitchen/partials/field_errors.html" with field=form.name %}
       </div>
       {{ formset.management_form }}
       <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
       <div class="table-wrap">
-        <table class="data">
+        <table class="data formset-table">
           <thead><tr><th>Kun</th><th>Retsept</th><th>Tur</th><th>Porsiya</th><th>O‘chirish</th></tr></thead>
           <tbody>
             {% for f in formset %}
             <tr>
-              <td>{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.weekday }}{% if f.instance.pk %}{{ f.id }}{% endif %}</td>
-              <td>{{ f.recipe }}</td>
-              <td>{{ f.meal_type }}</td>
-              <td>{{ f.portions }}</td>
-              <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+              <td data-label="Kun">{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.weekday }}{% if f.instance.pk %}{{ f.id }}{% endif %}{% include "kitchen/partials/field_errors.html" with field=f.weekday %}</td>
+              <td data-label="Retsept">{{ f.recipe }}{% include "kitchen/partials/field_errors.html" with field=f.recipe %}</td>
+              <td data-label="Tur">{{ f.meal_type }}{% include "kitchen/partials/field_errors.html" with field=f.meal_type %}</td>
+              <td data-label="Porsiya">{{ f.portions }}{% include "kitchen/partials/field_errors.html" with field=f.portions %}</td>
+              <td data-label="O‘chirish">{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>

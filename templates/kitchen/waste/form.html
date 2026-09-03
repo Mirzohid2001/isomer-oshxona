@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Chiqindi — Oshxona{% endblock %}
+{% block page_title %}Chiqindi / buzilish{% endblock %}
+{% block page_subtitle %}Rasxod qilishdan oldin FEFO tannarx ko‘rinadi{% endblock %}
+{% block content %}
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-body">
+      <form method="post" id="waste-form">
+        {% csrf_token %}
+        <div class="form-grid">
+          {% for field in form %}
+          <div class="form-field {% if field.name == 'note' %}full{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="flash flash-error field-error">{{ field.errors|striptags }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Saqlash</button>
+          <a class="btn btn-ghost" href="{% url 'waste_list' %}">Orqaga</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>FEFO tannarx</h3></div>
+    <div class="panel-body" id="waste-allocation-preview">
+      <div class="empty">Mahsulot va miqdorni tanlang</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const previewUrl = "{% url 'stock_consume_preview' %}";
+  const productEl = document.getElementById('id_product');
+  const qtyEl = document.getElementById('id_quantity');
+  const box = document.getElementById('waste-allocation-preview');
+  if (!productEl || !qtyEl || !box) return;
+
+  const money = (v) =>
+    new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 }).format(Number(v)) + " so'm";
+
+  const fmtDate = (iso) => {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  };
+
+  let timer = null;
+  const refresh = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const product = productEl.value;
+      const quantity = qtyEl.value;
+      if (!product || !quantity || Number(quantity) <= 0) {
+        box.innerHTML = '<div class="empty">Mahsulot va miqdorni tanlang</div>';
+        return;
+      }
+      box.innerHTML = '<div class="muted-note">Hisoblanmoqda…</div>';
+      try {
+        const res = await fetch(`${previewUrl}?product=${encodeURIComponent(product)}&quantity=${encodeURIComponent(quantity)}`);
+        const data = await res.json();
+        if (!data.ok) {
+          box.innerHTML = `<div class="flash flash-error">${data.error || 'Xato'}</div>`;
+          return;
+        }
+        if (!data.enough_stock) {
+          box.innerHTML = `
+            <div class="flash flash-error flash-spaced">
+              Yetarli emas — omborda <strong>${data.available} ${data.unit}</strong>, siz <strong>${data.quantity} ${data.unit}</strong> kiritdingiz.
+            </div>
+            <div class="muted-note">FEFO tannarx faqat mavjud qoldiq uchun hisoblanadi.</div>
+          `;
+          return;
+        }
+        const mixed = data.mixed ? '<span class="badge badge-warn">Aralash narx</span>' : '';
+        const rows = (data.lines || []).map((row) => `
+          <tr>
+            <td>${row.lot_id ? '#' + row.lot_id : 'Avto'}</td>
+            <td>${row.quantity} ${data.unit}</td>
+            <td>${money(row.unit_cost)}</td>
+            <td>${money(row.line_cost)}</td>
+            <td>${row.expiry_date ? fmtDate(row.expiry_date) : '—'}</td>
+          </tr>
+        `).join('');
+        box.innerHTML = `
+          <div class="alloc-head">${mixed}<strong>Jami: ${money(data.total_cost)}</strong> · o‘rtacha ${money(data.avg_unit_cost)}/${data.unit}</div>
+          <div class="table-wrap">
+            <table class="data data-compact">
+              <thead><tr><th>Partiya</th><th>Miqdor</th><th>Narx</th><th>Summa</th><th>Muddat</th></tr></thead>
+              <tbody>${rows || '<tr><td colspan="5" class="empty">Partiya topilmadi</td></tr>'}</tbody>
+            </table>
+          </div>
+        `;
+      } catch (e) {
+        box.innerHTML = '<div class="flash flash-error">Tarmoq xatosi</div>';
+      }
+    }, 250);
+  };
+
+  productEl.addEventListener('change', refresh);
+  qtyEl.addEventListener('input', refresh);
+  refresh();
+})();
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@
 {% if preview %}
 <p class="text-note">
   <strong>{{ preview.portions }}</strong> porsiya = <strong>{{ preview.portions }}</strong> kishi uchun.
-  Pastdagi kkal/BJU — <strong>1 porsiya</strong> hisobi.
+  Pastdagi kkal/BJU — <strong>1 porsiya</strong> hisobi. Tannarx — <strong>FEFO</strong> (partiya bo‘yicha).
 </p>
 <div class="meta-row meta-row-spaced">
   <div class="metric"><span>Jami tannarx</span><strong>{{ preview.total_cost|floatformat:0|intcomma }}</strong></div>
@@ -27,14 +27,26 @@
 <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
 <div class="table-wrap">
   <table class="data">
-    <thead><tr><th>Mahsulot</th><th>Kerak ({{ preview.portions }} porsiya)</th><th>Omborda</th></tr></thead>
+    <thead><tr><th>Mahsulot</th><th>Kerak</th><th>Omborda</th><th>O‘rtacha narx</th><th>Summa</th></tr></thead>
     <tbody>
       {% for row in preview.items %}
       <tr>
-        <td>{{ row.product.name }}</td>
+        <td>
+          {{ row.product.name }}
+          {% if row.mixed_cost %}<span class="badge badge-warn badge-inline">Aralash</span>{% endif %}
+        </td>
         <td>{{ row.need }} {{ row.product.unit }}</td>
         <td>{% if row.enough %}<span class="badge badge-ok">{{ row.have }} {{ row.product.unit }}</span>{% else %}<span class="badge badge-danger">{{ row.have }} {{ row.product.unit }}</span>{% endif %}</td>
+        <td>{{ row.unit_cost|floatformat:0|intcomma }}</td>
+        <td>{{ row.line_cost|floatformat:0|intcomma }}</td>
       </tr>
+      {% if row.allocations and row.mixed_cost %}
+      <tr class="alloc-subrow">
+        <td colspan="5">
+          {% include "kitchen/partials/allocation_table.html" with allocations=row.allocations unit=row.product.unit show_expiry=True total_cost=row.line_cost avg_unit_cost=row.unit_cost %}
+        </td>
+      </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>

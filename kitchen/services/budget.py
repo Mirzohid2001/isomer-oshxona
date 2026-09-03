@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from kitchen.models import CookBatch, MonthlyBudget, MovementType, StockMovement
 from kitchen.services.precision import money
+from kitchen.utils import local_month_bounds
 
 
 def budget_status(year=None, month=None):
@@ -16,10 +17,11 @@ def budget_status(year=None, month=None):
     except MonthlyBudget.DoesNotExist:
         return None
 
+    start_dt, end_dt = local_month_bounds(year, month)
     spent = money(
         CookBatch.objects.filter(
-            cooked_at__year=year,
-            cooked_at__month=month,
+            cooked_at__gte=start_dt,
+            cooked_at__lt=end_dt,
             status=CookBatch.Status.DONE,
         ).aggregate(total=Sum('total_cost'))['total']
         or 0
@@ -27,8 +29,8 @@ def budget_status(year=None, month=None):
     waste = money(
         StockMovement.objects.filter(
             movement_type=MovementType.WASTE,
-            created_at__year=year,
-            created_at__month=month,
+            created_at__gte=start_dt,
+            created_at__lt=end_dt,
         ).aggregate(total=Sum('total_cost'))['total']
         or 0
     )

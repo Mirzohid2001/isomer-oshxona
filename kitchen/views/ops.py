@@ -18,7 +18,7 @@ from kitchen.models import (
 from kitchen.services.approvals import receive_purchase_order, review_change_request
 from kitchen.services.cook import queue_cook, start_queued_cook
 from kitchen.services.stock import StockError
-from kitchen.utils import paginate
+from kitchen.utils import local_day_bounds, paginate
 
 
 PurchaseOrderLineFormSet = inlineformset_factory(
@@ -69,12 +69,14 @@ def kds_board(request):
     from kitchen.forms import CookForm
 
     today = timezone.localdate()
+    day_start, day_end = local_day_bounds(today)
     queued = CookBatch.objects.filter(
         status__in=[CookBatch.Status.QUEUED, CookBatch.Status.COOKING],
     ).select_related('recipe', 'created_by')
     done_today = CookBatch.objects.filter(
         status=CookBatch.Status.DONE,
-        cooked_at__date=today,
+        cooked_at__gte=day_start,
+        cooked_at__lt=day_end,
     ).select_related('recipe')[:20]
     return render(
         request,
@@ -115,11 +117,11 @@ def kds_queue(request):
                 note=form.cleaned_data.get('note') or '',
                 shift=form.cleaned_data.get('shift') or '',
             )
-            messages.success(request, f'Navbatga qo‘yildi: {batch.recipe.name}')
+            messages.success(request, f'Navbatga qo‘yildi va ombor rezerv qilindi: {batch.recipe.name}')
         except StockError as exc:
             messages.error(request, str(exc))
     else:
-        messages.error(request, 'Forma xato.')
+            messages.error(request, form.errors.as_text() or 'Forma xato.')
     return redirect('kds_board')
 
 

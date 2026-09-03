@@ -2,14 +2,18 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_GET
 
 from kitchen.forms import AdjustStockForm, ReceiptForm, WasteForm
 from kitchen.models import MovementType, Product, StockMovement
 from kitchen.services import StockError, adjust_stock, receive_stock, record_waste
 from kitchen.services.export import spreadsheet_download
-from kitchen.utils import paginate, parse_date
+from kitchen.services.precision import qty
+from kitchen.services.stock import allocation_rows_from_movement, preview_fefo_allocation
+from kitchen.utils import filter_dt_range, paginate, parse_date
 
 
 @login_required
@@ -31,6 +35,76 @@ def stock_list(request):
         request,
         'kitchen/stock/list.html',
         {'products': products, 'filter_mode': filter_mode},
+    )
+
+
+@login_required
+@require_GET
+def stock_consume_preview(request):
+    product_id = request.GET.get('product')
+    if not product_id:
+        return JsonResponse({'ok': False, 'error': 'Mahsulot tanlanmadi.'}, status=400)
+    product = get_object_or_404(Product, pk=product_id, is_active=True)
+    try:
+        quantity = qty(request.GET.get('quantity') or '0')
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Miqdor noto‘g‘ri.'}, status=400)
+    if quantity <= 0:
+        return JsonResponse({'ok': False, 'error': 'Miqdor 0 dan katta bo‘lishi kerak.'}, status=400)
+
+    allocation = preview_fefo_allocation(product, quantity)
+    available = qty(product.quantity)
+    enough_stock = available >= quantity
+    lines = []
+    for row in allocation['lines']:
+        lines.append(
+            {
+                'lot_id': row['lot_id'],
+                'quantity': str(row['quantity']),
+                'unit_cost': str(row['unit_cost']),
+                'line_cost': str(row['line_cost']),
+                'expiry_date': row['expiry_date'].isoformat() if row.get('expiry_date') else None,
+                'synthetic': row.get('synthetic', False),
+            }
+        )
+    return JsonResponse(
+        {
+            'ok': True,
+            'product': product.name,
+            'unit': product.unit,
+            'quantity': str(allocation['quantity']),
+            'available': str(available),
+            'enough_stock': enough_stock,
+            'total_cost': str(allocation['total_cost']),
+            'avg_unit_cost': str(allocation['avg_unit_cost']),
+            'mixed': allocation['mixed'],
+            'lines': lines,
+        }
+    )
+
+
+@login_required
+def movement_detail(request, pk):
+    movement = get_object_or_404(
+        StockMovement.objects.select_related(
+            'product',
+            'supplier',
+            'created_by',
+            'location',
+            'cook_batch__recipe',
+        ),
+        pk=pk,
+    )
+    allocations = allocation_rows_from_movement(movement)
+    return render(
+        request,
+        'kitchen/stock/movement_detail.html',
+        {
+            'movement': movement,
+            'allocations': allocations,
+            'has_allocations': bool(allocations),
+            'mixed': len(allocations) > 1,
+        },
     )
 
 
@@ -74,9 +148,9 @@ def receipt_list(request):
     if product_id:
         movements = movements.filter(product_id=product_id)
     if date_from:
-        movements = movements.filter(created_at__date__gte=date_from)
+        movements = filter_dt_range(movements, 'created_at', start_date=date_from)
     if date_to:
-        movements = movements.filter(created_at__date__lte=date_to)
+        movements = filter_dt_range(movements, 'created_at', end_date=date_to)
     page_obj, querystring = paginate(request, movements, per_page=25)
     return render(
         request,
@@ -127,9 +201,9 @@ def receipt_export(request):
     if product_id:
         movements = movements.filter(product_id=product_id)
     if date_from:
-        movements = movements.filter(created_at__date__gte=date_from)
+        movements = filter_dt_range(movements, 'created_at', start_date=date_from)
     if date_to:
-        movements = movements.filter(created_at__date__lte=date_to)
+        movements = filter_dt_range(movements, 'created_at', end_date=date_to)
     rows = [
         [
             m.created_at.strftime('%d.%m.%Y %H:%M'),
@@ -194,4 +268,8 @@ def waste_create(request):
             return redirect('waste_list')
         except StockError as exc:
             messages.error(request, str(exc))
-    return render(request, 'kitchen/form_page.html', {'form': form, 'title': 'Chiqindi / buzilish'})
+    return render(
+        request,
+        'kitchen/waste/form.html',
+        {'form': form},
+    )

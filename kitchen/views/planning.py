@@ -8,7 +8,7 @@ from kitchen.models import AuditLog, MonthlyBudget
 from kitchen.services import budget_status, shopping_list_for_date, shopping_list_for_range
 from kitchen.services.export import spreadsheet_download
 from kitchen.services.pdf import shopping_pdf
-from kitchen.utils import local_today, paginate, parse_date
+from kitchen.utils import filter_dt_range, local_today, paginate, parse_date
 
 
 @login_required
@@ -130,9 +130,9 @@ def audit_list(request):
     if action:
         logs = logs.filter(action__icontains=action)
     if date_from:
-        logs = logs.filter(created_at__date__gte=date_from)
+        logs = filter_dt_range(logs, 'created_at', start_date=date_from)
     if date_to:
-        logs = logs.filter(created_at__date__lte=date_to)
+        logs = filter_dt_range(logs, 'created_at', end_date=date_to)
     actions = (
         AuditLog.objects.order_by('action').values_list('action', flat=True).distinct()
     )

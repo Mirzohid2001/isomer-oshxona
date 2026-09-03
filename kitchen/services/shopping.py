@@ -38,10 +38,9 @@ def _build_rows(needs):
 
 def shopping_list_for_menu(menu):
     needs = defaultdict(lambda: Decimal('0'))
-    items = menu.items.filter(is_cooked=False).select_related('recipe').prefetch_related(
-        'recipe__items__product'
-    )
-    for item in items:
+    for item in menu.items.all():
+        if item.is_cooked:
+            continue
         preview = recipe_nutrition(item.recipe, item.portions)
         for row in preview['items']:
             needs[row['product'].pk] += row['need']
@@ -53,7 +52,9 @@ def shopping_list_for_date(date):
     if not date:
         return {'rows': [], 'total_est': money(0)}
     try:
-        menu = DailyMenu.objects.prefetch_related('items__recipe__items__product').get(date=date)
+        menu = DailyMenu.objects.prefetch_related(
+            'items__recipe__items__product'
+        ).get(date=date)
     except DailyMenu.DoesNotExist:
         return {'rows': [], 'total_est': money(0)}
     return shopping_list_for_menu(menu)
@@ -69,7 +70,9 @@ def shopping_list_for_range(start_date, days=7):
         'items__recipe__items__product'
     )
     for menu in menus:
-        for item in menu.items.filter(is_cooked=False):
+        for item in menu.items.all():
+            if item.is_cooked:
+                continue
             preview = recipe_nutrition(item.recipe, item.portions)
             for row in preview['items']:
                 needs[row['product'].pk] += row['need']

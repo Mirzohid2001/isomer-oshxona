@@ -9,13 +9,16 @@ from django.utils import timezone
 from kitchen.models import CookBatch, DailyHeadcount, Product, Recipe, StockMovement
 from kitchen.services import budget_status
 from kitchen.services.analytics import stock_snapshot
+from kitchen.utils import local_day_bounds
 
 
 @login_required
 def dashboard(request):
     today = timezone.localdate()
+    day_start, day_end = local_day_bounds(today)
     today_batches = CookBatch.objects.filter(
-        cooked_at__date=today,
+        cooked_at__gte=day_start,
+        cooked_at__lt=day_end,
         status=CookBatch.Status.DONE,
     ).select_related('recipe')
     today_cost = today_batches.aggregate(t=Sum('total_cost'))['t'] or Decimal('0')

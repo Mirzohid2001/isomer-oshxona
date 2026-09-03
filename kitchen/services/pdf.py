@@ -181,16 +181,36 @@ def cook_batch_pdf(batch):
         pdf.cell(0, 6, f'Allergenlar: {batch.recipe.allergens}', new_x='LMARGIN', new_y='NEXT')
         pdf.ln(4)
     pdf.section('Rasxod qilingan mahsulotlar')
-    rows = [
-        [item.product.name, f'{item.quantity} {item.product.unit}', item.line_cost]
-        for item in batch.items.select_related('product')
-    ]
+    from kitchen.services.stock import allocation_rows_from_movement
+
+    rows = []
+    for item in batch.items.select_related('product'):
+        rows.append(
+            [item.product.name, f'{item.quantity} {item.product.unit}', item.unit_cost, item.line_cost]
+        )
+        movement = (
+            batch.movements.filter(product=item.product)
+            .prefetch_related('lot_allocations__lot')
+            .first()
+        )
+        if not movement:
+            continue
+        for alloc in allocation_rows_from_movement(movement):
+            lot_label = f'  Partiya #{alloc["lot_id"]}' if alloc.get('lot_id') else '  Avto-partiya'
+            rows.append(
+                [
+                    lot_label,
+                    f'{alloc["quantity"]} {item.product.unit}',
+                    alloc['unit_cost'],
+                    alloc['line_cost'],
+                ]
+            )
     pdf.table(
-        ['Mahsulot', 'Miqdor', 'Summa'],
+        ['Mahsulot', 'Miqdor', 'O‘rtacha narx', 'Summa'],
         rows,
-        [92, 38, 50],
-        aligns=['L', 'C', 'R'],
-        money_cols={2},
+        [62, 38, 40, 40],
+        aligns=['L', 'C', 'R', 'R'],
+        money_cols={2, 3},
     )
     pdf.total_row('JAMI', batch.total_cost)
     return pdf_response(pdf, f'pishirish_{batch.pk}.pdf')

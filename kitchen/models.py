@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -34,12 +35,15 @@ class Shift(models.TextChoices):
 
 
 class Category(models.Model):
-    name = models.CharField('Nomi', max_length=120, unique=True)
+    name = models.CharField('Nomi', max_length=120)
 
     class Meta:
         ordering = ['name']
         verbose_name = 'Kategoriya'
         verbose_name_plural = 'Kategoriyalar'
+        constraints = [
+            models.UniqueConstraint(Lower('name'), name='kit_category_name_lower_uniq'),
+        ]
 
     def __str__(self):
         return self.name
@@ -519,6 +523,7 @@ class StockChangeRequest(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='change_requests')
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
     new_quantity = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    requested_from_quantity = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
     note = models.CharField(max_length=255, blank=True)
     status = models.CharField(
         max_length=12,

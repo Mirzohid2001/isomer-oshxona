@@ -19,7 +19,7 @@
       </div>
       <div class="form-actions">
         <button class="btn" type="submit">Saqlash</button>
-        <a class="btn btn-ghost" href="{% if next %}{{ next }}{% else %}{% url 'product_list' %}{% endif %}">Orqaga</a>
+        <a class="btn btn-ghost" href="{% if next %}{{ next }}{% elif cancel_url %}{{ cancel_url }}{% else %}javascript:history.back(){% endif %}">Orqaga</a>
       </div>
     </form>
   </div>

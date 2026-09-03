@@ -39,6 +39,18 @@ class CategoryForm(StyledFormMixin, forms.ModelForm):
         model = Category
         fields = ['name']
 
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if not name:
+            raise forms.ValidationError('Nom bo‘sh bo‘lmasin.')
+        qs = Category.objects.filter(name__iexact=name)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        existing = qs.first()
+        if existing:
+            raise forms.ValidationError(f'Bunday kategoriya allaqachon bor: {existing.name}')
+        return name
+
 
 class SupplierForm(StyledFormMixin, forms.ModelForm):
     class Meta:
@@ -122,6 +134,13 @@ class RecipeItemForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = RecipeItem
         fields = ['product', 'quantity_per_portion']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['quantity_per_portion'].label = 'Miqdor / baza retsept'
+        self.fields['quantity_per_portion'].help_text = (
+            'Bu miqdor retseptdagi baza porsiya uchun yoziladi.'
+        )
 
 
 class BaseRecipeItemFormSet(forms.BaseInlineFormSet):

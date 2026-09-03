@@ -1,35 +1,39 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} — Oshxona{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
-{% block page_subtitle %}Ingredientlar 1 porsiya uchun{% endblock %}
+{% block page_subtitle %}Ingredientlar baza porsiya uchun{% endblock %}
 {% block content %}
 <div class="panel panel-limited">
   <div class="panel-body">
     <form method="post">
       {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="flash flash-error flash-spaced">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if formset.non_form_errors %}
+      <div class="flash flash-error flash-spaced">{{ formset.non_form_errors }}</div>
+      {% endif %}
       <div class="form-grid">
         {% for field in form %}
         <div class="form-field {% if field.name == 'description' or field.name == 'allergens' or field.name == 'is_active' %}full{% endif %}">
           <label>{{ field.label }}</label>
           {{ field }}
+          {% include "kitchen/partials/field_errors.html" %}
         </div>
         {% endfor %}
       </div>
       <h3 class="form-section-title">Ingredientlar</h3>
-      {% if formset.non_form_errors %}
-      <div class="flash flash-error flash-spaced">{{ formset.non_form_errors }}</div>
-      {% endif %}
       {{ formset.management_form }}
       <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
       <div class="table-wrap">
-        <table class="data">
-          <thead><tr><th>Mahsulot</th><th>Miqdor / porsiya</th><th>O‘chirish</th></tr></thead>
+        <table class="data formset-table">
+          <thead><tr><th>Mahsulot</th><th>Miqdor / baza retsept</th><th>O‘chirish</th></tr></thead>
           <tbody>
             {% for f in formset %}
             <tr>
-              <td>{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.product }}{% if f.instance.pk %}{{ f.id }}{% endif %}</td>
-              <td>{{ f.quantity_per_portion }}</td>
-              <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+              <td data-label="Mahsulot">{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.product }}{% if f.instance.pk %}{{ f.id }}{% endif %}{% include "kitchen/partials/field_errors.html" with field=f.product %}</td>
+              <td data-label="Miqdor">{{ f.quantity_per_portion }}{% include "kitchen/partials/field_errors.html" with field=f.quantity_per_portion %}</td>
+              <td data-label="O‘chirish">{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>

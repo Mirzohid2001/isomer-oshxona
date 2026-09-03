@@ -161,7 +161,11 @@ def menu_apply_template(request):
         log_action(request.user, 'shablon', 'menu_template', template.pk, str(week_start))
         messages.success(request, f'Shablon qo‘llandi (eski menyu almashtirildi): {created} ta ovqat.')
         return redirect(f"{reverse('menu_day')}?date={week_start.isoformat()}")
-    return render(request, 'kitchen/form_page.html', {'form': form, 'title': 'Shablonni qo‘llash'})
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {'form': form, 'title': 'Shablonni qo‘llash', 'cancel_url': f"{reverse('menu_day')}?date={local_today().isoformat()}"},
+    )
 
 
 @login_required

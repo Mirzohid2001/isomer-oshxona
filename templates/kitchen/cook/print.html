@@ -10,17 +10,28 @@
 <div class="print-sheet">
   <h1>Oshxona — pishirish varaqasi</h1>
   <p><strong>{{ batch.recipe.name }}</strong> · {{ batch.portions }} porsiya · {{ batch.cooked_at|date:"d.m.Y H:i" }}</p>
-  <p>1 porsiya: {{ batch.cost_per_portion|floatformat:0|intcomma }} so‘m · {{ batch.kcal_per_portion|floatformat:0 }} kkal</p>
+  <p>1 porsiya: {{ batch.cost_per_portion|floatformat:0|intcomma }} so‘m · {{ batch.kcal_per_portion|floatformat:0 }} kkal · FEFO tannarx</p>
   {% if batch.recipe.allergens %}<p>Allergenlar: {{ batch.recipe.allergens }}</p>{% endif %}
   <table class="data">
-    <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Summa</th></tr></thead>
+    <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>O‘rtacha narx</th><th>Summa</th></tr></thead>
     <tbody>
-      {% for item in batch.items.all %}
+      {% for row in item_rows %}
+      {% with item=row.item %}
       <tr>
         <td>{{ item.product.name }}</td>
         <td>{{ item.quantity }} {{ item.product.unit }}</td>
+        <td>{{ item.unit_cost|floatformat:0|intcomma }}</td>
         <td>{{ item.line_cost|floatformat:0|intcomma }}</td>
       </tr>
+      {% for alloc in row.allocations %}
+      <tr>
+        <td style="padding-left:1.25rem;color:#5f7268">↳ Partiya {% if alloc.lot_id %}#{{ alloc.lot_id }}{% else %}avto{% endif %}</td>
+        <td>{{ alloc.quantity }} {{ item.product.unit }}</td>
+        <td>{{ alloc.unit_cost|floatformat:0|intcomma }}</td>
+        <td>{{ alloc.line_cost|floatformat:0|intcomma }}</td>
+      </tr>
+      {% endfor %}
+      {% endwith %}
       {% endfor %}
     </tbody>
   </table>

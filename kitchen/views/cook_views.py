@@ -7,6 +7,7 @@ from kitchen.forms import CookForm
 from kitchen.models import CookBatch, Recipe
 from kitchen.services import StockError, cancel_cook_batch, cook_recipe, recipe_nutrition
 from kitchen.services.pdf import cook_batch_pdf
+from kitchen.services.stock import allocation_rows_from_movement
 from kitchen.utils import paginate
 from kitchen.views.common import suggested_portions
 
@@ -81,21 +82,48 @@ def cook_detail(request, pk):
         CookBatch.objects.select_related('recipe').prefetch_related('items__product'),
         pk=pk,
     )
-    return render(request, 'kitchen/cook/detail.html', {'batch': batch})
+    movements = {
+        m.product_id: m
+        for m in batch.movements.prefetch_related('lot_allocations__lot').select_related('product')
+    }
+    item_rows = []
+    for item in batch.items.all():
+        movement = movements.get(item.product_id)
+        allocations = allocation_rows_from_movement(movement) if movement else []
+        item_rows.append(
+            {
+                'item': item,
+                'allocations': allocations,
+                'mixed': len(allocations) > 1,
+                'movement_id': movement.pk if movement else None,
+            }
+        )
+    return render(
+        request,
+        'kitchen/cook/detail.html',
+        {'batch': batch, 'item_rows': item_rows},
+    )
 
 
 @login_required
 @require_POST
 def cook_cancel(request, pk):
     batch = get_object_or_404(CookBatch, pk=pk)
-    if not request.user.is_staff:
-        messages.error(request, 'Faqat admin bekor qila oladi.')
+    open_statuses = {CookBatch.Status.QUEUED, CookBatch.Status.COOKING}
+    if batch.status == CookBatch.Status.DONE and not request.user.is_staff:
+        messages.error(request, 'Faqat admin yakunlangan pishirishni bekor qila oladi.')
+        return redirect('cook_detail', pk=pk)
+    if batch.status not in open_statuses | {CookBatch.Status.DONE}:
+        messages.error(request, 'Bu holatda bekor qilib bo‘lmaydi.')
         return redirect('cook_detail', pk=pk)
     try:
         cancel_cook_batch(batch=batch, user=request.user)
-        messages.success(request, 'Pishirish bekor qilindi, mahsulotlar qaytarildi.')
+        messages.success(request, 'Bekor qilindi, mahsulotlar omborga qaytarildi.')
     except StockError as exc:
         messages.error(request, str(exc))
+    next_url = request.POST.get('next') or ''
+    if next_url.startswith('/') and not next_url.startswith('//'):
+        return redirect(next_url)
     return redirect('cook_detail', pk=pk)
 
 
@@ -105,7 +133,20 @@ def cook_print(request, pk):
         CookBatch.objects.select_related('recipe').prefetch_related('items__product'),
         pk=pk,
     )
-    return render(request, 'kitchen/cook/print.html', {'batch': batch})
+    movements = {
+        m.product_id: m
+        for m in batch.movements.prefetch_related('lot_allocations__lot')
+    }
+    item_rows = []
+    for item in batch.items.all():
+        movement = movements.get(item.product_id)
+        allocations = allocation_rows_from_movement(movement) if movement else []
+        item_rows.append({'item': item, 'allocations': allocations})
+    return render(
+        request,
+        'kitchen/cook/print.html',
+        {'batch': batch, 'item_rows': item_rows},
+    )
 
 
 @login_required

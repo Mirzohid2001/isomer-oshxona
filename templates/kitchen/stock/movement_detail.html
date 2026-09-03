@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Harakat #{{ movement.pk }} — Oshxona{% endblock %}
+{% block page_title %}Ombor harakati #{{ movement.pk }}{% endblock %}
+{% block page_subtitle %}{{ movement.get_movement_type_display }} · {{ movement.product.name }}{% endblock %}
+{% block content %}
+<div class="toolbar no-print">
+  <a class="btn btn-ghost" href="javascript:history.back()">Orqaga</a>
+</div>
+
+<div class="grid-stats">
+  <div class="stat">
+    <div class="stat-label">Miqdor</div>
+    <div class="stat-value">{{ movement.quantity }} {{ movement.product.unit }}</div>
+  </div>
+  <div class="stat stat-accent">
+    <div class="stat-label">O‘rtacha narx</div>
+    <div class="stat-value">{{ movement.unit_cost|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Jami summa</div>
+    <div class="stat-value">{{ movement.total_cost|floatformat:0|intcomma }}</div>
+  </div>
+</div>
+
+<div class="panel panel-spaced">
+  <div class="panel-head"><h3>Ma’lumot</h3></div>
+  <div class="panel-body">
+    <div class="meta-row">
+      <div class="metric"><span>Sana</span><strong>{{ movement.created_at|date:"d.m.Y H:i" }}</strong></div>
+      <div class="metric"><span>Mahsulot</span><strong>{{ movement.product.name }}</strong></div>
+      <div class="metric"><span>Joy</span><strong>{{ movement.location.name|default:"—" }}</strong></div>
+    </div>
+    {% if movement.note %}
+    <p class="text-note" style="margin-top:0.75rem"><strong>Izoh:</strong> {{ movement.note }}</p>
+    {% endif %}
+    {% if movement.cook_batch %}
+    <p class="text-note"><a href="{% url 'cook_detail' movement.cook_batch_id %}">Pishirish #{{ movement.cook_batch_id }} — {{ movement.cook_batch.recipe.name }}</a></p>
+    {% endif %}
+  </div>
+</div>
+
+{% if has_allocations %}
+<div class="panel panel-spaced">
+  <div class="panel-head">
+    <h3>Partiya taqsimoti</h3>
+    <span class="muted-note">Eng yaqin muddatli partiyadan sarflangan</span>
+  </div>
+  <div class="panel-body">
+    {% include "kitchen/partials/allocation_table.html" with allocations=allocations unit=movement.product.unit show_expiry=True total_cost=movement.total_cost avg_unit_cost=movement.unit_cost mixed=mixed %}
+  </div>
+</div>
+{% else %}
+<div class="panel panel-spaced">
+  <div class="panel-body">
+    <div class="empty">Bu harakat uchun partiya yozuvi yo‘q (prixod yoki eski ma’lumot).</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

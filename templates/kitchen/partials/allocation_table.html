@@ -1,0 +1,59 @@
+{% load humanize %}
+{% if allocations %}
+<div class="alloc-panel">
+  <div class="alloc-head">
+    <strong>FEFO bo‘yicha partiyalar</strong>
+    {% if mixed %}<span class="badge badge-warn">Aralash narx</span>{% endif %}
+  </div>
+  <div class="table-wrap">
+    <table class="data data-compact">
+      <thead>
+        <tr>
+          <th>Partiya</th>
+          <th>Miqdor</th>
+          <th>Narx</th>
+          <th>Summa</th>
+          {% if show_expiry %}<th>Muddat</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in allocations %}
+        <tr>
+          <td>
+            {% if row.lot_id %}#{{ row.lot_id }}{% else %}<span class="muted-note">Avto</span>{% endif %}
+          </td>
+          <td>{{ row.quantity }} {{ unit|default:'' }}</td>
+          <td>{{ row.unit_cost|floatformat:0|intcomma }}</td>
+          <td>{{ row.line_cost|floatformat:0|intcomma }}</td>
+          {% if show_expiry %}
+          <td>{% if row.expiry_date %}{{ row.expiry_date|date:"d.m.Y" }}{% else %}—{% endif %}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if total_cost %}
+      <tfoot>
+        <tr>
+          {% if show_expiry %}
+          <td colspan="4"><strong>Jami</strong></td>
+          {% else %}
+          <td colspan="3"><strong>Jami</strong></td>
+          {% endif %}
+          <td><strong>{{ total_cost|floatformat:0|intcomma }}</strong></td>
+        </tr>
+        {% if avg_unit_cost %}
+        <tr>
+          {% if show_expiry %}
+          <td colspan="4"><span class="muted-note">O‘rtacha birlik narxi</span></td>
+          {% else %}
+          <td colspan="3"><span class="muted-note">O‘rtacha birlik narxi</span></td>
+          {% endif %}
+          <td><span class="muted-note">{{ avg_unit_cost|floatformat:0|intcomma }}</span></td>
+        </tr>
+        {% endif %}
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endif %}

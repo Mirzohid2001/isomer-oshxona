@@ -55,18 +55,21 @@
     <form method="post">
       {% csrf_token %}
       {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+      <div class="flash flash-error flash-spaced">{{ formset.non_form_errors }}</div>
+      {% endif %}
       <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
       <div class="table-wrap">
-        <table class="data">
+        <table class="data formset-table">
           <thead><tr><th>Retsept</th><th>Tur</th><th>Porsiya</th><th>O‘chirish</th><th>Pishirish</th></tr></thead>
           <tbody>
             {% for f in formset %}
             <tr>
-              <td>{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.recipe }}{% if f.instance.pk %}{{ f.id }}{% endif %}</td>
-              <td>{{ f.meal_type }}</td>
-              <td>{{ f.portions }}</td>
-              <td>{% if f.DELETE %}<label class="badge badge-mute">{{ f.DELETE }} o‘chirish</label>{% endif %}</td>
-              <td>
+              <td data-label="Retsept">{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.recipe }}{% if f.instance.pk %}{{ f.id }}{% endif %}{% include "kitchen/partials/field_errors.html" with field=f.recipe %}</td>
+              <td data-label="Tur">{{ f.meal_type }}{% include "kitchen/partials/field_errors.html" with field=f.meal_type %}</td>
+              <td data-label="Porsiya">{{ f.portions }}{% include "kitchen/partials/field_errors.html" with field=f.portions %}</td>
+              <td data-label="O‘chirish">{% if f.DELETE %}<label class="badge badge-mute">{{ f.DELETE }} o‘chirish</label>{% endif %}</td>
+              <td data-label="Pishirish">
                 {% if f.instance.pk %}
                   {% if f.instance.is_cooked %}
                     <span class="badge badge-ok">Tayyor</span>

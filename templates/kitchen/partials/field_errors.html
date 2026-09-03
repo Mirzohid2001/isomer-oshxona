@@ -1,0 +1,6 @@
+{% if field.errors %}
+<div class="flash flash-error field-error">{{ field.errors|striptags }}</div>
+{% endif %}
+{% if field.help_text %}
+<div class="field-help">{{ field.help_text }}</div>
+{% endif %}

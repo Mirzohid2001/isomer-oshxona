@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation
 
 from kitchen.models import Recipe
 from kitchen.services.precision import as_decimal, money, money_div, nutri, nutri_div, qty
+from kitchen.services.stock import preview_fefo_allocation
 
 
 def _empty(recipe):
@@ -33,6 +34,10 @@ def recipe_nutrition(recipe, portions=1, *, products=None):
 
     portions_int = int(portions_dec)
     portions_dec = Decimal(portions_int)
+    base_portions = Decimal(recipe.base_portions or 1)
+    if base_portions <= 0:
+        base_portions = Decimal('1')
+    scale = portions_dec / base_portions
 
     items = []
     total_cost_exact = Decimal('0')
@@ -51,10 +56,11 @@ def recipe_nutrition(recipe, portions=1, *, products=None):
         if product.allergens:
             allergen_set.update(a.strip() for a in product.allergens.split(',') if a.strip())
 
-        need = qty(as_decimal(item.quantity_per_portion) * portions_dec)
-        unit_cost = as_decimal(product.avg_cost)
-        line_cost_exact = need * unit_cost
+        need = qty(as_decimal(item.quantity_per_portion) * scale)
+        allocation = preview_fefo_allocation(product, need)
+        line_cost_exact = as_decimal(allocation['total_cost'])
         line_cost = money(line_cost_exact)
+        unit_cost = allocation['avg_unit_cost']
 
         line_kcal_exact = need * as_decimal(product.kcal_per_unit)
         line_protein_exact = need * as_decimal(product.protein)
@@ -82,6 +88,8 @@ def recipe_nutrition(recipe, portions=1, *, products=None):
                 'line_cost': line_cost,
                 'line_kcal': nutri(line_kcal_exact),
                 'enough': enough,
+                'allocations': allocation['lines'],
+                'mixed_cost': allocation['mixed'],
             }
         )
         total_cost_exact += line_cost_exact

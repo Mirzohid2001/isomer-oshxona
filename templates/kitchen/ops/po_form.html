@@ -6,27 +6,35 @@
   <div class="panel-body">
     <form method="post">
       {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="flash flash-error flash-spaced">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% if formset.non_form_errors %}
+      <div class="flash flash-error flash-spaced">{{ formset.non_form_errors }}</div>
+      {% endif %}
       <div class="form-grid">
         {% for field in form %}
         <div class="form-field {% if field.name == 'note' %}full{% endif %}">
           <label>{{ field.label }}</label>
           {{ field }}
+          {% include "kitchen/partials/field_errors.html" %}
         </div>
         {% endfor %}
       </div>
       <h3 class="form-section-title">Qatorlar</h3>
       {{ formset.management_form }}
+      <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
       <div class="table-wrap">
-        <table class="data">
+        <table class="data formset-table">
           <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Muddat</th><th></th></tr></thead>
           <tbody>
             {% for f in formset %}
             <tr>
-              <td>{% for h in f.hidden_fields %}{{ h }}{% endfor %}{{ f.product }}</td>
-              <td>{{ f.quantity }}</td>
-              <td>{{ f.unit_cost }}</td>
-              <td>{{ f.expiry_date }}</td>
-              <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+              <td data-label="Mahsulot">{% for h in f.hidden_fields %}{{ h }}{% endfor %}{{ f.product }}{% include "kitchen/partials/field_errors.html" with field=f.product %}</td>
+              <td data-label="Miqdor">{{ f.quantity }}{% include "kitchen/partials/field_errors.html" with field=f.quantity %}</td>
+              <td data-label="Narx">{{ f.unit_cost }}{% include "kitchen/partials/field_errors.html" with field=f.unit_cost %}</td>
+              <td data-label="Muddat">{{ f.expiry_date }}{% include "kitchen/partials/field_errors.html" with field=f.expiry_date %}</td>
+              <td data-label="O‘chirish">{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>

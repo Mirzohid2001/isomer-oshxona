@@ -4,6 +4,7 @@ from django.db import IntegrityError
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from kitchen.forms import CategoryForm, ProductForm, SupplierForm
@@ -145,6 +146,7 @@ def category_create(request):
             'form': form,
             'title': 'Yangi kategoriya',
             'next': next_url,
+            'cancel_url': reverse('category_list') if not next_url else '',
         },
     )
 
@@ -161,7 +163,7 @@ def category_edit(request, pk):
     return render(
         request,
         'kitchen/form_page.html',
-        {'form': form, 'title': f'Tahrir: {category.name}'},
+        {'form': form, 'title': f'Tahrir: {category.name}', 'cancel_url': reverse('category_list')},
     )
 
 
@@ -192,7 +194,13 @@ def category_quick_create(request):
     if len(name) > 120:
         return JsonResponse({'ok': False, 'error': 'Nom juda uzun.'}, status=400)
     try:
-        cat, created = Category.objects.get_or_create(name=name)
+        existing = Category.objects.filter(name__iexact=name).first()
+        if existing:
+            return JsonResponse(
+                {'ok': True, 'id': existing.pk, 'name': existing.name, 'created': False}
+            )
+        cat = Category.objects.create(name=name)
+        created = True
     except IntegrityError:
         cat = Category.objects.filter(name__iexact=name).first()
         created = False
@@ -219,7 +227,11 @@ def supplier_create(request):
         form.save()
         messages.success(request, 'Yetkazib beruvchi qo‘shildi.')
         return redirect('supplier_list')
-    return render(request, 'kitchen/form_page.html', {'form': form, 'title': 'Yetkazib beruvchi'})
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {'form': form, 'title': 'Yetkazib beruvchi', 'cancel_url': reverse('supplier_list')},
+    )
 
 
 @login_required
@@ -230,4 +242,8 @@ def supplier_edit(request, pk):
         form.save()
         messages.success(request, 'Saqlandi.')
         return redirect('supplier_list')
-    return render(request, 'kitchen/form_page.html', {'form': form, 'title': supplier.name})
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {'form': form, 'title': supplier.name, 'cancel_url': reverse('supplier_list')},
+    )
