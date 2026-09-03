@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Yangi prixod — Oshxona{% endblock %}
+{% block page_title %}Yangi prixod{% endblock %}
+{% block page_subtitle %}Ombor avtomatik yangilanadi{% endblock %}
+{% block content %}
+<div class="panel panel-limited-sm">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        {% for field in form %}
+        <div class="form-field {% if field.name == 'note' %}full{% endif %}">
+          <label>{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="flash flash-error field-error">{{ field.errors|striptags }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">Kiritish</button>
+        <a class="btn btn-ghost" href="{% url 'receipt_list' %}">Orqaga</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Oshxona{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+<body x-data="{ navOpen: false }" :class="{ 'nav-open': navOpen }">
+{% if user.is_authenticated %}
+<div class="nav-backdrop" x-show="navOpen" x-cloak @click="navOpen = false"></div>
+<div class="app-shell">
+  <aside class="sidebar" :class="{ 'is-open': navOpen }" @keydown.escape.window="navOpen = false">
+    <div class="brand">
+      <div class="brand-mark">O</div>
+      <h1>Oshxona</h1>
+      <p>Neft zavodi oshpaz paneli</p>
+    </div>
+    <nav class="nav-group">
+      <div class="nav-label">Asosiy</div>
+      <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}" @click="navOpen = false">Bosh sahifa</a>
+      <a class="nav-link {% if 'product' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'product_list' %}" @click="navOpen = false">Mahsulotlar</a>
+      <a class="nav-link {% if 'stock' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'stock_list' %}" @click="navOpen = false">Ombor{% if nav_low_stock %}<span class="nav-badge">{{ nav_low_stock }}</span>{% endif %}</a>
+      <a class="nav-link {% if 'receipt' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'receipt_list' %}" @click="navOpen = false">Prixodlar</a>
+      <a class="nav-link {% if 'supplier' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'supplier_list' %}" @click="navOpen = false">Yetkazuvchilar</a>
+      <div class="nav-label">Ovqat</div>
+      <a class="nav-link {% if 'recipe' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'recipe_list' %}" @click="navOpen = false">Retseptlar</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'cook_create' %}is-active{% endif %}" href="{% url 'cook_create' %}" @click="navOpen = false">Pishirish</a>
+      <a class="nav-link {% if 'cook' in request.resolver_match.url_name and request.resolver_match.url_name != 'cook_create' %}is-active{% endif %}" href="{% url 'cook_history' %}" @click="navOpen = false">Pishirish tarixi</a>
+      <a class="nav-link {% if 'menu' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'menu_day' %}" @click="navOpen = false">Kunlik menyu</a>
+      <a class="nav-link {% if 'waste' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'waste_list' %}" @click="navOpen = false">Chiqindi</a>
+      <div class="nav-label">Reja</div>
+      <a class="nav-link {% if 'headcount' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'headcount_list' %}" @click="navOpen = false">Smena / odam</a>
+      <a class="nav-link {% if 'shopping' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'shopping_list' %}" @click="navOpen = false">Xarid ro‘yxati</a>
+      <a class="nav-link {% if 'budget' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'budget_page' %}" @click="navOpen = false">Byudjet</a>
+      <a class="nav-link {% if 'report' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'reports' %}" @click="navOpen = false">Analitika</a>
+      <a class="nav-link {% if 'audit' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'audit_list' %}" @click="navOpen = false">Audit</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.get_username|slice:":1" }}</div>
+        <div>{{ user.get_username }}</div>
+      </div>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button class="btn btn-ghost btn-sm sidebar-logout" type="submit">Chiqish</button>
+      </form>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">
+        <button class="nav-toggle btn btn-ghost btn-sm no-print" type="button" @click="navOpen = !navOpen" aria-label="Menyu">Menyu</button>
+        <h2>{% block page_title %}Bosh sahifa{% endblock %}</h2>
+        <p>{% block page_subtitle %}Oshxona boshqaruvi{% endblock %}</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="notify-wrap" x-data="{ open: false }">
+          <button
+            class="notify-btn"
+            type="button"
+            @click="open = !open"
+            aria-label="Bildirishnomalar"
+          >
+            <span class="notify-bell" aria-hidden="true"></span>
+            {% if notification_count %}
+            <span class="notify-count">{{ notification_count }}</span>
+            {% endif %}
+          </button>
+          <div class="notify-panel" x-show="open" x-cloak @click.outside="open = false">
+            <div class="notify-head">
+              <strong>Bildirishnomalar</strong>
+              {% if notification_count %}
+              <form method="post" action="{% url 'notification_dismiss_all' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="btn btn-ghost btn-sm" type="submit">Hammasini yopish</button>
+              </form>
+              {% endif %}
+            </div>
+            <div class="notify-list">
+              {% for n in notifications %}
+              <div class="notify-item is-{{ n.severity }}">
+                <a href="{{ n.url }}" class="notify-main">
+                  <strong>{{ n.title }}</strong>
+                  <span>{{ n.detail }}</span>
+                </a>
+                <form method="post" action="{% url 'notification_dismiss' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="key" value="{{ n.key }}">
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button class="notify-close" type="submit" title="Yopish" aria-label="Yopish">×</button>
+                </form>
+              </div>
+              {% empty %}
+              <div class="notify-empty">Hozircha ogohlantirish yo‘q</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="search-wrap" x-data="{ open: false }">
+          <input
+            type="search"
+            name="q"
+            placeholder="Qidiruv: mahsulot, retsept..."
+            hx-get="{% url 'search' %}"
+            hx-trigger="keyup changed delay:250ms"
+            hx-target="#search-results"
+            hx-swap="innerHTML"
+            @focus="open = true"
+            @click.outside="open = false"
+            autocomplete="off"
+          >
+          <div id="search-results" class="search-panel" x-show="open" x-cloak></div>
+        </div>
+      </div>
+    </div>
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="flash flash-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+<nav class="mobile-nav no-print" aria-label="Tezkor menyu">
+  <a class="mobile-nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}">
+    <span class="mobile-nav-icon icon-home" aria-hidden="true"></span>
+    <span>Bosh</span>
+  </a>
+  <a class="mobile-nav-link {% if request.resolver_match.url_name == 'cook_create' %}is-active{% endif %}" href="{% url 'cook_create' %}">
+    <span class="mobile-nav-icon icon-cook" aria-hidden="true"></span>
+    <span>Pishirish</span>
+  </a>
+  <a class="mobile-nav-link {% if 'menu' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'menu_day' %}">
+    <span class="mobile-nav-icon icon-menu" aria-hidden="true"></span>
+    <span>Menyu</span>
+  </a>
+  <a class="mobile-nav-link {% if 'stock' in request.resolver_match.url_name or 'product' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'stock_list' %}">
+    <span class="mobile-nav-icon icon-stock" aria-hidden="true"></span>
+    <span>Ombor</span>
+  </a>
+  <button class="mobile-nav-link" type="button" @click="navOpen = true" aria-label="To‘liq menyu">
+    <span class="mobile-nav-icon icon-more" aria-hidden="true"></span>
+    <span>Barchasi</span>
+  </button>
+</nav>
+{% else %}
+{% block auth %}{% endblock %}
+{% endif %}
+<style>[x-cloak]{display:none!important}</style>
+{% block scripts %}{% endblock %}
+</body>
+</html>

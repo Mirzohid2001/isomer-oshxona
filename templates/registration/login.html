@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Kirish — Oshxona{% endblock %}
+{% block auth %}
+<div class="login-page">
+  <div class="login-card">
+    <div class="brand-mark">O</div>
+    <h1>Oshxona</h1>
+    <p>Neft zavodi oshpaz tizimiga kirish</p>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.errors %}
+      <div class="flash flash-error">Login yoki parol noto‘g‘ri.</div>
+      {% endif %}
+      <div class="form-field">
+        <label for="id_username">Login</label>
+        <input class="form-input" type="text" name="username" id="id_username" autofocus required autocomplete="username">
+      </div>
+      <div class="form-field">
+        <label for="id_password">Parol</label>
+        <input class="form-input" type="password" name="password" id="id_password" required autocomplete="current-password">
+      </div>
+      <button class="btn btn-block" type="submit">Kirish</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

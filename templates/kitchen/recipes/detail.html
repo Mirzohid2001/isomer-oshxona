@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ recipe.name }} — Oshxona{% endblock %}
+{% block page_title %}{{ recipe.name }}{% endblock %}
+{% block page_subtitle %}{{ recipe.get_meal_type_display }}{% if recipe.allergens %} · {{ recipe.allergens }}{% endif %}{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="toolbar-actions">
+  <a class="btn btn-ghost" href="{% url 'recipe_edit' recipe.pk %}">Tahrirlash</a>
+  <a class="btn" href="{% url 'recipe_pdf' recipe.pk %}?portions={{ portions }}">PDF</a>
+  <a class="btn btn-ghost" href="{% url 'recipe_print' recipe.pk %}?portions={{ portions }}">Chop etish</a>
+  <a class="btn btn-accent" href="{% url 'cook_create' %}?recipe={{ recipe.pk }}&portions={{ portions }}">Pishirish</a>
+  </div>
+</div>
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-head"><h3>Kalkulyator</h3></div>
+    <div class="panel-body">
+      <form>
+        <div class="form-field form-field-narrow">
+          <label>Porsiya soni</label>
+          <input
+            class="form-input"
+            type="number"
+            name="portions"
+            min="1"
+            value="{{ portions }}"
+            hx-get="{% url 'recipe_detail' recipe.pk %}"
+            hx-trigger="change, keyup changed delay:200ms"
+            hx-target="#recipe-calc"
+            hx-swap="innerHTML"
+          >
+        </div>
+      </form>
+      <div id="recipe-calc">
+        {% include "kitchen/recipes/partials/calc.html" %}
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Tavsif</h3></div>
+    <div class="panel-body">
+      <p class="text-muted">{{ recipe.description|default:"Tavsif kiritilmagan."|linebreaksbr }}</p>
+      <div class="stat stat-flat stat-flat-top">
+        <div class="stat-label">Joriy 1 porsiya tannarx</div>
+        <div class="stat-value">{{ current_cost|floatformat:0|intcomma }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head">
+    <h3>Tannarx tarixi</h3>
+    <span class="muted-note">1 porsiya · pishirishlar bo‘yicha</span>
+  </div>
+  <div class="panel-body">
+    {% if cost_chart %}
+    {{ cost_chart|json_script:"cost-history-data" }}
+    <div class="trend-chart-wrap">
+      <canvas id="cost-history-chart" aria-label="Tannarx tarixi"></canvas>
+    </div>
+    <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+    <div class="table-wrap table-wrap-spaced-top">
+      <table class="data">
+        <thead><tr><th>Sana</th><th>Porsiya</th><th>1 porsiya narx</th><th>Kkal</th></tr></thead>
+        <tbody>
+          {% for row in cost_history reversed %}
+          <tr>
+            <td>{{ row.cooked_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ row.portions }}</td>
+            <td>{{ row.cost_per_portion|floatformat:0|intcomma }}</td>
+            <td>{{ row.kcal_per_portion|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">Hali pishirilmagan — tarix paydo bo‘ladi</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if cost_chart %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const el = document.getElementById('cost-history-chart');
+  const raw = document.getElementById('cost-history-data');
+  if (!el || !raw || typeof Chart === 'undefined') return;
+
+  const points = JSON.parse(raw.textContent);
+  const labels = points.map((p) => p.label);
+  const costs = points.map((p) => Number(p.cost) || 0);
+  const money = (v) =>
+    new Intl.NumberFormat('uz-UZ', { maximumFractionDigits: 0 }).format(v) + " so'm";
+
+  const brand = '#1a5542';
+  const accent = '#b56a28';
+  const muted = '#5a6f63';
+  const grid = 'rgba(21, 36, 28, 0.08)';
+
+  new Chart(el, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '1 porsiya tannarx',
+          data: costs,
+          tension: 0.35,
+          borderWidth: 2.5,
+          borderColor: brand,
+          pointRadius: points.length > 20 ? 3 : 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: brand,
+          pointBorderWidth: 2,
+          fill: true,
+          backgroundColor: 'rgba(26, 85, 66, 0.08)',
+        },
+        {
+          label: 'Porsiyalar',
+          data: points.map((p) => Number(p.portions) || 0),
+          yAxisID: 'y1',
+          tension: 0.35,
+          borderWidth: 2,
+          borderColor: accent,
+          pointRadius: 0,
+          borderDash: [4, 4],
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: {
+            boxWidth: 12,
+            usePointStyle: true,
+            color: muted,
+            font: { family: 'Figtree, sans-serif', size: 12, weight: '600' },
+          },
+        },
+        tooltip: {
+          backgroundColor: '#12201a',
+          callbacks: {
+            title: (items) => {
+              const i = items[0]?.dataIndex;
+              return points[i]?.date || items[0]?.label || '';
+            },
+            label: (ctx) => {
+              if (ctx.datasetIndex === 0) {
+                return ' Tannarx: ' + money(ctx.parsed.y);
+              }
+              return ' Porsiya: ' + ctx.parsed.y;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: muted, maxRotation: 0, font: { size: 11 } },
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: grid },
+          ticks: {
+            color: muted,
+            callback: (v) => (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+          },
+          title: { display: true, text: "So'm", color: muted, font: { size: 11, weight: '600' } },
+        },
+        y1: {
+          position: 'right',
+          beginAtZero: true,
+          grid: { drawOnChartArea: false },
+          ticks: { color: accent, precision: 0 },
+          title: { display: true, text: 'Porsiya', color: accent, font: { size: 11, weight: '600' } },
+        },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

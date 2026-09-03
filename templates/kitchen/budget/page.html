@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Byudjet — Oshxona{% endblock %}
+{% block page_title %}Oylik byudjet{% endblock %}
+{% block page_subtitle %}Limit va fakt xarajat{% endblock %}
+{% block content %}
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-head"><h3>Byudjet belgilash</h3></div>
+    <div class="panel-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-grid">
+          {% for field in form %}
+          <div class="form-field">
+            <label>{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="form-actions"><button class="btn" type="submit">Saqlash</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Joriy oy</h3></div>
+    <div class="panel-body">
+      {% if status %}
+      <div class="stat stat-flat">
+        <div class="stat-label">Sarflangan</div>
+        <div class="stat-value">{{ status.spent|floatformat:0|intcomma }}</div>
+      </div>
+      <div class="progress progress-spaced {% if status.over %}is-over{% endif %}"><span style="width:{{ status.percent }}%"></span></div>
+      <p class="text-muted">
+        Limit: {{ status.budget.limit_amount|floatformat:0|intcomma }} ·
+        Pishirish: {{ status.cook_spent|floatformat:0|intcomma }} ·
+        Chiqindi: {{ status.waste_spent|floatformat:0|intcomma }}
+      </p>
+      {% else %}
+      <div class="empty">Bu oy uchun byudjet belgilanmagan</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="panel panel-spaced-top">
+  <div class="panel-head"><h3>Tarix</h3></div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Yil</th><th>Oy</th><th>Limit</th></tr></thead>
+      <tbody>
+        {% for b in history %}
+        <tr><td>{{ b.year }}</td><td>{{ b.month }}</td><td>{{ b.limit_amount|floatformat:0|intcomma }}</td></tr>
+        {% empty %}
+        <tr><td colspan="3" class="empty">Yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

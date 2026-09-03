@@ -1,0 +1,18 @@
+<div class="search-section">
+  {% if not q %}
+  <p class="text-sm text-muted">Qidirish uchun yozing...</p>
+  {% else %}
+  <h4>Mahsulotlar</h4>
+  {% for p in products %}
+  <a href="{% url 'product_edit' p.pk %}">{{ p.name }} · {{ p.quantity }} {{ p.unit }}</a>
+  {% empty %}<div class="text-sm text-muted">Topilmadi</div>{% endfor %}
+  <h4>Retseptlar</h4>
+  {% for r in recipes %}
+  <a href="{% url 'recipe_detail' r.pk %}">{{ r.name }}</a>
+  {% empty %}<div class="text-sm text-muted">Topilmadi</div>{% endfor %}
+  <h4>Harakatlar</h4>
+  {% for m in movements %}
+  <a href="{% url 'receipt_list' %}">{{ m.get_movement_type_display }} — {{ m.product.name }}</a>
+  {% empty %}<div class="text-sm text-muted">Topilmadi</div>{% endfor %}
+  {% endif %}
+</div>

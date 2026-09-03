@@ -1,0 +1,36 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <title>{{ recipe.name }} — retsept</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="print-sheet">
+  <h1>{{ recipe.name }}</h1>
+  <p>{{ recipe.get_meal_type_display }} · {{ portions }} porsiya</p>
+  {% if recipe.allergens %}<p><strong>Allergenlar:</strong> {{ recipe.allergens }}</p>{% endif %}
+  <p>{{ recipe.description }}</p>
+  <p>
+    1 porsiya: <strong>{{ info.cost_per_portion|floatformat:0|intcomma }} so‘m</strong> ·
+    {{ info.kcal_per_portion|floatformat:0 }} kkal ·
+    BJU {{ info.protein_per_portion|floatformat:1 }}/{{ info.fat_per_portion|floatformat:1 }}/{{ info.carbs_per_portion|floatformat:1 }}
+  </p>
+  <table class="data">
+    <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Summa</th></tr></thead>
+    <tbody>
+      {% for row in info.items %}
+      <tr>
+        <td>{{ row.product.name }}</td>
+        <td>{{ row.need }} {{ row.product.unit }}</td>
+        <td>{{ row.line_cost|floatformat:0|intcomma }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="margin-top:1.2rem"><strong>Jami:</strong> {{ info.total_cost|floatformat:0|intcomma }} so‘m</p>
+  <script>window.print()</script>
+</div>
+</body>
+</html>

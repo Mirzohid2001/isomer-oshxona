@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Yetkazib beruvchilar — Oshxona{% endblock %}
+{% block page_title %}Yetkazib beruvchilar{% endblock %}
+{% block page_subtitle %}Prixod uchun kontragentlar{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="toolbar-actions">
+  <a class="btn" href="{% url 'supplier_create' %}">Yangi</a>
+  </div>
+</div>
+<div class="panel">
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Nomi</th><th>Telefon</th><th>Izoh</th><th>Holat</th><th></th></tr></thead>
+      <tbody>
+        {% for s in suppliers %}
+        <tr>
+          <td><strong>{{ s.name }}</strong></td>
+          <td>{{ s.phone|default:"—" }}</td>
+          <td>{{ s.note|truncatechars:60|default:"—" }}</td>
+          <td>{% if s.is_active %}<span class="badge badge-ok">Faol</span>{% else %}<span class="badge badge-mute">O‘chiq</span>{% endif %}</td>
+          <td><a class="btn btn-ghost btn-sm" href="{% url 'supplier_edit' s.pk %}">Tahrir</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty">Hali yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

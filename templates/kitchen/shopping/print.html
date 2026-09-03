@@ -1,0 +1,31 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <title>Xarid ro‘yxati</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="print-sheet">
+  <h1>Xarid ro‘yxati</h1>
+  <p>{{ title_range }} · {% if mode == 'week' %}Haftalik{% else %}Kunlik{% endif %}</p>
+  <table class="data">
+    <thead><tr><th>Mahsulot</th><th>Sotib olish</th><th>Taxminiy</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.product.name }}</td>
+        <td>{{ row.buy }} {{ row.product.unit }}</td>
+        <td>{{ row.est_cost|floatformat:0|intcomma }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3">Ro‘yxat bo‘sh</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="margin-top:1.2rem"><strong>Jami taxminiy:</strong> {{ total_est|floatformat:0|intcomma }} so‘m</p>
+  <script>window.print()</script>
+</div>
+</body>
+</html>

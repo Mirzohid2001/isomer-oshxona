@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Mahsulotlar — Oshxona{% endblock %}
+{% block page_title %}Mahsulotlar{% endblock %}
+{% block page_subtitle %}Spravochnik va joriy ombor holati{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="toolbar-actions">
+  <a class="btn" href="{% url 'product_create' %}">Yangi mahsulot</a>
+  <a class="btn btn-ghost" href="{% url 'category_create' %}">Kategoriya</a>
+  <a class="btn {% if show == 'active' %}btn-accent{% else %}btn-ghost{% endif %}" href="?show=active">Faol</a>
+  <a class="btn {% if show == 'inactive' %}btn-accent{% else %}btn-ghost{% endif %}" href="?show=inactive">Arxiv</a>
+  <a class="btn {% if show == 'all' %}btn-accent{% else %}btn-ghost{% endif %}" href="?show=all">Barchasi</a>
+  </div>
+  <form method="get" class="toolbar-form">
+    <input type="hidden" name="show" value="{{ show }}">
+    <input class="form-input" type="search" name="q" value="{{ q }}" placeholder="Qidiruv">
+    <select class="form-select" name="category">
+      <option value="">Barcha kategoriya</option>
+      {% for c in categories %}
+      <option value="{{ c.id }}" {% if category_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-ghost" type="submit">Filter</button>
+  </form>
+</div>
+<div class="panel">
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Nomi</th><th>Kategoriya</th><th>Qoldiq</th><th>Tannarx</th><th>Kkal</th><th>Holat</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td><strong>{{ p.name }}</strong>{% if not p.is_active %} <span class="badge badge-mute">arxiv</span>{% endif %}</td>
+          <td>{{ p.category.name }}</td>
+          <td>{{ p.quantity }} {{ p.unit }}</td>
+          <td>{{ p.avg_cost|floatformat:0|intcomma }}</td>
+          <td>{{ p.kcal_per_unit|floatformat:0 }} / {{ p.unit }}</td>
+          <td>
+            {% if p.is_low %}<span class="badge badge-danger">Kam</span>
+            {% elif p.is_expired %}<span class="badge badge-danger">Muddati o‘tgan</span>
+            {% elif p.is_expiring_soon %}<span class="badge badge-warn">Muddat yaqin</span>
+            {% else %}<span class="badge badge-ok">OK</span>{% endif %}
+          </td>
+          <td class="cell-actions">
+            <a class="btn btn-ghost btn-sm" href="{% url 'product_edit' p.pk %}">Tahrir</a>
+            <form method="post" action="{% url 'product_toggle' p.pk %}" class="form-inline">
+              {% csrf_token %}
+              <button class="btn btn-ghost btn-sm" type="submit">{% if p.is_active %}O‘chirish{% else %}Faollashtirish{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">Mahsulot yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "kitchen/partials/pagination.html" %}
+</div>
+{% endblock %}

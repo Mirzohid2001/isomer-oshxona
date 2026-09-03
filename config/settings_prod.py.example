@@ -1,0 +1,88 @@
+"""
+Production settings — Contabo / Docker.
+
+Deployda:
+  cp config/settings_prod.py.example config/settings_prod.py
+
+Ishlatish:
+  DJANGO_SETTINGS_MODULE=config.settings_prod
+
+Maxfiy qiymatlar .env / server environment ichida.
+"""
+import os
+
+# settings.py oxirida settings_dev import qilmasligi uchun
+os.environ["RIVOJ_ENV"] = "production"
+
+from .settings import *  # noqa: E402,F401,F403
+
+DEBUG = False
+
+SECRET_KEY = os.environ["SECRET_KEY"]
+
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.getenv("ALLOWED_HOSTS", "").split(",")
+    if h.strip()
+]
+if not ALLOWED_HOSTS:
+    raise RuntimeError("ALLOWED_HOSTS bo'sh — .env ga domen/IP yozing")
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
+]
+
+# Caddy / reverse proxy ortida
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+_secure = os.getenv("SECURE_SSL_REDIRECT", "false").lower() in ("1", "true", "yes")
+SECURE_SSL_REDIRECT = _secure
+SESSION_COOKIE_SECURE = _secure
+CSRF_COOKIE_SECURE = _secure
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if not _secure else "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _secure
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "oshxona"),
+        "USER": os.environ.get("POSTGRES_USER", "oshxona"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
+        "HOST": os.environ.get("POSTGRES_HOST", "db"),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": int(os.environ.get("CONN_MAX_AGE", "60")),
+        "OPTIONS": {"connect_timeout": 10},
+    }
+}
+
+STATIC_ROOT = BASE_DIR / "staticfiles"  # noqa: F405
+
+MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")  # noqa: F405
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/1").strip()
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+        "KEY_PREFIX": "oshxona",
+    }
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("LOG_LEVEL", "INFO"),
+    },
+}

@@ -1,0 +1,34 @@
+{% load humanize %}
+<div class="grid-stats grid-stats-2">
+  <div class="stat"><div class="stat-label">Jami tannarx ({{ info.portions }} porsiya)</div><div class="stat-value">{{ info.total_cost|floatformat:0|intcomma }}</div></div>
+  <div class="stat stat-accent"><div class="stat-label">1 porsiya narx</div><div class="stat-value">{{ info.cost_per_portion|floatformat:0|intcomma }}</div></div>
+  <div class="stat"><div class="stat-label">1 porsiya kkal</div><div class="stat-value">{{ info.kcal_per_portion|floatformat:0 }}</div></div>
+  <div class="stat"><div class="stat-label">1 porsiya BJU (g)</div><div class="stat-value stat-value-sm">{{ info.protein_per_portion|floatformat:1 }} / {{ info.fat_per_portion|floatformat:1 }} / {{ info.carbs_per_portion|floatformat:1 }}</div></div>
+</div>
+{% if info.shortages %}
+<div class="flash flash-error flash-spaced">Yetishmaydi: {% for s in info.shortages %}{{ s.product.name }} (−{{ s.missing }} {{ s.product.unit }}){% if not forloop.last %}, {% endif %}{% endfor %}</div>
+{% else %}
+<div class="flash flash-success flash-spaced">Mahsulot yetarli — pishirish mumkin</div>
+{% endif %}
+{% if info.allergens %}
+<div class="badge-row">{% for a in info.allergens %}<span class="badge badge-warn">{{ a }}</span> {% endfor %}</div>
+{% endif %}
+<div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Mahsulot</th><th>Kerak</th><th>Bor</th><th>Summa</th><th></th></tr></thead>
+    <tbody>
+      {% for row in info.items %}
+      <tr>
+        <td>{{ row.product.name }}</td>
+        <td>{{ row.need }} {{ row.product.unit }}</td>
+        <td>{{ row.have }} {{ row.product.unit }}</td>
+        <td>{{ row.line_cost|floatformat:0|intcomma }}</td>
+        <td>{% if row.enough %}<span class="badge badge-ok">OK</span>{% else %}<span class="badge badge-danger">Kam</span>{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="empty">Ingredient yo‘q</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

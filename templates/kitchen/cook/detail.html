@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ batch.recipe.name }} — Pishirish{% endblock %}
+{% block page_title %}{{ batch.recipe.name }}{% endblock %}
+{% block page_subtitle %}{{ batch.cooked_at|date:"d.m.Y H:i" }} · {{ batch.portions }} porsiya{% endblock %}
+{% block content %}
+<div class="toolbar no-print">
+  <div class="toolbar-actions">
+  <a class="btn" href="{% url 'cook_pdf' batch.pk %}">PDF</a>
+  <a class="btn btn-ghost" href="{% url 'cook_print' batch.pk %}">Chop etish</a>
+  {% if batch.status == 'done' and user.is_staff %}
+  <form method="post" action="{% url 'cook_cancel' batch.pk %}" onsubmit="return confirm('Bekor qilinsinmi? Mahsulotlar qaytariladi.')">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Bekor qilish</button>
+  </form>
+  {% endif %}
+  </div>
+</div>
+<div class="grid-stats">
+  <div class="stat"><div class="stat-label">Jami tannarx</div><div class="stat-value">{{ batch.total_cost|floatformat:0|intcomma }}</div></div>
+  <div class="stat stat-accent"><div class="stat-label">1 porsiya</div><div class="stat-value">{{ batch.cost_per_portion|floatformat:0|intcomma }}</div></div>
+  <div class="stat"><div class="stat-label">1 porsiya kkal</div><div class="stat-value">{{ batch.kcal_per_portion|floatformat:0 }}</div></div>
+  <div class="stat"><div class="stat-label">BJU</div><div class="stat-value stat-value-sm">{{ batch.protein_per_portion|floatformat:1 }}/{{ batch.fat_per_portion|floatformat:1 }}/{{ batch.carbs_per_portion|floatformat:1 }}</div></div>
+</div>
+<div class="panel">
+  <div class="panel-head"><h3>Rasxod qilingan mahsulotlar</h3></div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Summa</th></tr></thead>
+      <tbody>
+        {% for item in batch.items.all %}
+        <tr>
+          <td>{{ item.product.name }}</td>
+          <td>{{ item.quantity }} {{ item.product.unit }}</td>
+          <td>{{ item.unit_cost|floatformat:0|intcomma }}</td>
+          <td>{{ item.line_cost|floatformat:0|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

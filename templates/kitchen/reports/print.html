@@ -1,0 +1,48 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <title>Hisobot — {{ label }}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="print-sheet">
+  <h1>Oshxona hisoboti</h1>
+  <p><strong>{{ label }}</strong> · {{ start }} — {{ end }}</p>
+  <div class="grid-stats" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:1rem 0">
+    <div class="stat"><div class="stat-label">Porsiyalar</div><div class="stat-value">{{ kpis.portions }}</div></div>
+    <div class="stat"><div class="stat-label">Pishirish</div><div class="stat-value">{{ kpis.cook_cost|floatformat:0|intcomma }}</div></div>
+    <div class="stat"><div class="stat-label">Chiqindi</div><div class="stat-value">{{ kpis.waste_cost|floatformat:0|intcomma }}</div></div>
+  </div>
+  <h2>Ovqatlar</h2>
+  <table class="data">
+    <thead><tr><th>Ovqat</th><th>Porsiya</th><th>Jami</th><th>1 porsiya</th></tr></thead>
+    <tbody>
+      {% for r in top_dishes %}
+      <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ r.portions }}</td>
+        <td>{{ r.cost|floatformat:0|intcomma }}</td>
+        <td>{{ r.avg_portion|floatformat:0|intcomma }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h2>Mahsulot rasxodi</h2>
+  <table class="data">
+    <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Summa</th></tr></thead>
+    <tbody>
+      {% for r in product_out %}
+      <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ r.qty }} {{ r.unit }}</td>
+        <td>{{ r.cost|floatformat:0|intcomma }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <script>window.print()</script>
+</div>
+</body>
+</html>

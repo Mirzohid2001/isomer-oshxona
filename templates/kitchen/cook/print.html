@@ -1,0 +1,31 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <title>Pishirish #{{ batch.pk }}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="print-sheet">
+  <h1>Oshxona — pishirish varaqasi</h1>
+  <p><strong>{{ batch.recipe.name }}</strong> · {{ batch.portions }} porsiya · {{ batch.cooked_at|date:"d.m.Y H:i" }}</p>
+  <p>1 porsiya: {{ batch.cost_per_portion|floatformat:0|intcomma }} so‘m · {{ batch.kcal_per_portion|floatformat:0 }} kkal</p>
+  {% if batch.recipe.allergens %}<p>Allergenlar: {{ batch.recipe.allergens }}</p>{% endif %}
+  <table class="data">
+    <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Summa</th></tr></thead>
+    <tbody>
+      {% for item in batch.items.all %}
+      <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }} {{ item.product.unit }}</td>
+        <td>{{ item.line_cost|floatformat:0|intcomma }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="margin-top:1.5rem"><strong>Jami:</strong> {{ batch.total_cost|floatformat:0|intcomma }} so‘m</p>
+  <script>window.print()</script>
+</div>
+</body>
+</html>

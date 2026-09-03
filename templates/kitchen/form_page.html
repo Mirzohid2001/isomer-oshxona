@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Oshxona{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Ma’lumotni to‘ldiring va saqlang{% endblock %}
+{% block content %}
+<div class="panel panel-limited-sm">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        {% for field in form %}
+        <div class="form-field {% if field.field.widget.input_type == 'checkbox' or field.name == 'note' or field.name == 'description' or field.name == 'allergens' %}full{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="flash flash-error field-error">{{ field.errors|striptags }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">Saqlash</button>
+        <a class="btn btn-ghost" href="javascript:history.back()">Orqaga</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

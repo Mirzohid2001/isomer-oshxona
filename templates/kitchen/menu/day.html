@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Kunlik menyu — Oshxona{% endblock %}
+{% block page_title %}Kunlik menyu{% endblock %}
+{% block page_subtitle %}Sana: {{ day }} · {% if people %}Tavsiya porsiya: {{ people }}{% else %}Smena odam soni kiritilmagan{% endif %}{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <form method="get" class="toolbar-form">
+    <input class="form-input" type="date" name="date" value="{{ day }}">
+    <button class="btn btn-ghost" type="submit">Ko‘rsatish</button>
+  </form>
+  <div class="toolbar-actions">
+  {% if people %}
+  <form method="post" action="{% url 'menu_fill_portions' %}">
+    {% csrf_token %}
+    <input type="hidden" name="date" value="{{ day }}">
+    <button class="btn btn-accent" type="submit">Barcha porsiyani {{ people }} qilish</button>
+  </form>
+  <a class="btn btn-ghost" href="{% url 'headcount_list' %}">Smena: {{ people }} odam</a>
+  {% else %}
+  <a class="btn btn-accent" href="{% url 'headcount_list' %}">Odam sonini kiritish</a>
+  {% endif %}
+  <a class="btn btn-ghost" href="{% url 'menu_templates' %}">Shablonlar</a>
+  <a class="btn btn-ghost" href="{% url 'menu_apply_template' %}">Shablonni qo‘llash</a>
+  <a class="btn" href="{% url 'shopping_list' %}?date={{ day }}">Xarid ro‘yxati</a>
+  </div>
+</div>
+
+{% if menu_rows %}
+<div class="panel panel-spaced">
+  <div class="panel-head"><h3>Bugungi reja</h3></div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Ovqat</th><th>Tur</th><th>Porsiya</th><th>Allergen</th><th>Holat</th></tr></thead>
+      <tbody>
+        {% for row in menu_rows %}
+        <tr>
+          <td><strong>{{ row.item.recipe.name }}</strong></td>
+          <td>{{ row.item.get_meal_type_display }}</td>
+          <td>{{ row.item.portions }}</td>
+          <td>
+            {% for a in row.allergens %}<span class="badge badge-warn">{{ a }}</span> {% empty %}—{% endfor %}
+          </td>
+          <td>{% if row.item.is_cooked %}<span class="badge badge-ok">Tayyor</span>{% else %}<span class="badge badge-mute">Reja</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      {{ formset.management_form }}
+      <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Retsept</th><th>Tur</th><th>Porsiya</th><th>O‘chirish</th><th>Pishirish</th></tr></thead>
+          <tbody>
+            {% for f in formset %}
+            <tr>
+              <td>{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}{{ f.recipe }}{% if f.instance.pk %}{{ f.id }}{% endif %}</td>
+              <td>{{ f.meal_type }}</td>
+              <td>{{ f.portions }}</td>
+              <td>{% if f.DELETE %}<label class="badge badge-mute">{{ f.DELETE }} o‘chirish</label>{% endif %}</td>
+              <td>
+                {% if f.instance.pk %}
+                  {% if f.instance.is_cooked %}
+                    <span class="badge badge-ok">Tayyor</span>
+                  {% else %}
+                    <button class="btn btn-sm" form="cook-{{ f.instance.pk }}" type="submit">Pishirish</button>
+                  {% endif %}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">Menyuni saqlash</button>
+      </div>
+    </form>
+    {% for f in formset %}
+      {% if f.instance.pk and not f.instance.is_cooked %}
+      <form id="cook-{{ f.instance.pk }}" method="post" action="{% url 'menu_cook_item' f.instance.pk %}">{% csrf_token %}</form>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Bosh sahifa — Oshxona{% endblock %}
+{% block page_title %}Bugungi holat{% endblock %}
+{% block page_subtitle %}Ombor, pishirish va byudjet bir qarashda{% endblock %}
+{% block content %}
+<div class="quick-actions">
+  <a class="quick-action" href="{% url 'cook_create' %}">
+    <strong>Pishirish</strong>
+    <span>Retseptdan porsiya tayyorlash</span>
+  </a>
+  <a class="quick-action" href="{% url 'receipt_create' %}">
+    <strong>Prixod</strong>
+    <span>Yangi mahsulot kirimi</span>
+  </a>
+  <a class="quick-action" href="{% url 'menu_day' %}">
+    <strong>Kunlik menyu</strong>
+    <span>Bugungi ovqatlar rejasi</span>
+  </a>
+  <a class="quick-action" href="{% url 'reports' %}">
+    <strong>Analitika</strong>
+    <span>Xarajat va dinamika</span>
+  </a>
+</div>
+
+<div class="grid-stats">
+  <div class="stat">
+    <div class="stat-label">Bugungi porsiyalar</div>
+    <div class="stat-value">{{ today_portions }}</div>
+  </div>
+  <div class="stat stat-accent">
+    <div class="stat-label">Bugungi xarajat</div>
+    <div class="stat-value">{{ today_cost|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Ombor qiymati</div>
+    <div class="stat-value">{{ stock_value|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Bugun odam</div>
+    <div class="stat-value">{{ people }}</div>
+  </div>
+</div>
+
+{% if budget %}
+<div class="panel panel-spaced">
+  <div class="panel-head">
+    <h3>Oylik byudjet</h3>
+    <a class="btn btn-ghost btn-sm" href="{% url 'budget_page' %}">Batafsil</a>
+  </div>
+  <div class="panel-body">
+    <div class="budget-meta">
+      <span>{{ budget.spent|floatformat:0|intcomma }} / {{ budget.budget.limit_amount|floatformat:0|intcomma }} so‘m</span>
+      <strong>{% if budget.over %}Limitdan oshgan{% else %}Qoldi: {{ budget.remaining|floatformat:0|intcomma }}{% endif %}</strong>
+    </div>
+    <div class="progress {% if budget.over %}is-over{% endif %}"><span style="width:{{ budget.percent }}%"></span></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Bugungi pishirishlar</h3>
+      <a class="btn btn-sm" href="{% url 'cook_create' %}">Pishirish</a>
+    </div>
+    <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Ovqat</th><th>Porsiya</th><th>Tannarx</th><th>Kkal</th></tr>
+        </thead>
+        <tbody>
+          {% for b in today_batches %}
+          <tr>
+            <td><a href="{% url 'cook_detail' b.pk %}">{{ b.recipe.name }}</a></td>
+            <td>{{ b.portions }}</td>
+            <td>{{ b.total_cost|floatformat:0|intcomma }}</td>
+            <td>{{ b.kcal_per_portion|floatformat:0 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty">Hali pishirilmagan</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h3>Ogohlantirishlar</h3>
+      <a class="btn btn-ghost btn-sm" href="{% url 'stock_list' %}?filter=low">Ombor</a>
+    </div>
+    <div class="panel-body">
+      <h4 class="section-label">Kam qoldiq</h4>
+      <div class="alert-list">
+        {% for p in low_products %}
+        <div class="alert-row">
+          <span>{{ p.name }}</span>
+          <span class="badge badge-danger">{{ p.quantity }} {{ p.unit }}</span>
+        </div>
+        {% empty %}
+        <p class="empty empty-inline">Hammasi yetarli</p>
+        {% endfor %}
+      </div>
+      <h4 class="section-label section-label-spaced">Muddat</h4>
+      <div class="alert-list">
+        {% for p in expiring %}
+        <div class="alert-row">
+          <span>{{ p.name }}</span>
+          <span class="badge badge-warn">{{ p.expiry_date }}</span>
+        </div>
+        {% empty %}
+        <p class="empty empty-inline">Yaqin muddat yo‘q</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head">
+    <h3>So‘nggi pishirishlar</h3>
+    <a class="btn btn-ghost btn-sm" href="{% url 'cook_history' %}">Barchasi</a>
+  </div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Sana</th><th>Ovqat</th><th>Porsiya</th><th>Jami</th><th>Holat</th></tr>
+      </thead>
+      <tbody>
+        {% for b in recent %}
+        <tr>
+          <td>{{ b.cooked_at|date:"d.m H:i" }}</td>
+          <td><a href="{% url 'cook_detail' b.pk %}">{{ b.recipe.name }}</a></td>
+          <td>{{ b.portions }}</td>
+          <td>{{ b.total_cost|floatformat:0|intcomma }}</td>
+          <td>
+            {% if b.status == 'done' %}<span class="badge badge-ok">Bajarildi</span>
+            {% else %}<span class="badge badge-mute">Bekor</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty">Ma’lumot yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

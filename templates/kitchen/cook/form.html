@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Pishirish — Oshxona{% endblock %}
+{% block page_title %}Pishirish{% endblock %}
+{% block page_subtitle %}{% if suggested %}Bugun tavsiya: {{ suggested }} porsiya (smena odamlari){% else %}Tasdiqlanganda ombor avtomatik rasxod qilinadi{% endif %}{% endblock %}
+{% block content %}
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-head"><h3>Buyurtma</h3></div>
+    <div class="panel-body">
+      <form method="post" id="cook-form">
+        {% csrf_token %}
+        <div class="form-grid">
+          <div class="form-field">
+            <label>{{ form.recipe.label }}</label>
+            {{ form.recipe }}
+          </div>
+          <div class="form-field">
+            <label>{{ form.portions.label }}</label>
+            {{ form.portions }}
+            {% if suggested %}
+            <button class="btn btn-ghost btn-sm btn-stack" type="button" onclick="document.getElementById('id_portions').value='{{ suggested }}'; document.getElementById('id_portions').dispatchEvent(new Event('change'))">Smenadan: {{ suggested }}</button>
+            {% endif %}
+          </div>
+          <div class="form-field full">
+            <label>{{ form.note.label }}</label>
+            {{ form.note }}
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-accent" type="submit" name="confirm" value="1">Tasdiqlash va rasxod</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Live preview</h3></div>
+    <div class="panel-body" id="cook-preview"
+         hx-get="{% url 'cook_preview' %}"
+         hx-trigger="load, change from:#id_recipe, change from:#id_portions, keyup changed delay:200ms from:#id_portions"
+         hx-include="#id_recipe,#id_portions"
+         hx-swap="innerHTML">
+      {% if preview %}
+      {% include "kitchen/cook/partials/preview.html" %}
+      {% else %}
+      <div class="empty">Ovqat va porsiya tanlang</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

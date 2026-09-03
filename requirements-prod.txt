@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Production server
+gunicorn>=22.0,<24
+whitenoise>=6.6,<7
+redis>=5.0,<6
