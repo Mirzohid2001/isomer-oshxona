@@ -90,7 +90,7 @@
         setVal('id_carbs', data.carbs);
         if (data.allergens) setVal('id_allergens', data.allergens);
         if (data.suggested_unit) setVal('id_unit', data.suggested_unit);
-        const src = data.source === 'ai' ? 'AI' : 'baza';
+        const src = data.source === 'gemini' ? 'Gemini' : (data.source === 'openai' ? 'OpenAI' : 'baza');
         hint.textContent = (data.note || 'To‘ldirildi') + ' · manba: ' + src;
         hint.classList.add('is-ok');
       } catch (e) {

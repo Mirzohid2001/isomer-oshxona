@@ -148,20 +148,108 @@ def lookup_local(name: str, unit: str | None = None) -> dict | None:
     return result
 
 
-def _lookup_ai(name: str, unit: str | None = None) -> dict | None:
+def _parse_nutrition_json(raw: str) -> dict | None:
+    text = (raw or '').strip()
+    if not text:
+        return None
+    # Markdown fence bo‘lsa tozalash
+    if text.startswith('```'):
+        text = re.sub(r'^```(?:json)?\s*', '', text)
+        text = re.sub(r'\s*```$', '', text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not match:
+            return None
+        try:
+            data = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _num(v, default=0.0):
+    try:
+        return float(Decimal(str(v)))
+    except Exception:
+        return default
+
+
+def _result_from_data(name: str, unit: str, data: dict, source: str) -> dict:
+    return {
+        'found': True,
+        'source': source,
+        'match': name,
+        'unit': data.get('unit') or unit,
+        'kcal_per_unit': _num(data.get('kcal_per_unit')),
+        'protein': _num(data.get('protein')),
+        'fat': _num(data.get('fat')),
+        'carbs': _num(data.get('carbs')),
+        'allergens': str(data.get('allergens') or ''),
+        'note': 'AI taxminiy qiymat — tekshirib saqlang',
+        'suggested_unit': data.get('unit') or unit,
+    }
+
+
+def _nutrition_prompt(name: str, unit: str) -> str:
+    return (
+        'Oshxona ombori uchun oziqlanish qiymatini faqat JSON qaytar. '
+        f'Mahsulot: "{name}". Birlik: {unit}. '
+        'Format: {"kcal_per_unit": number, "protein": number, "fat": number, '
+        '"carbs": number, "allergens": string, "unit": "kg"|"l"|"dona"}. '
+        'Qiymatlar 1 birlik (1 kg yoki 1 l yoki 1 dona) uchun: kkal va gramm. '
+        'Aniq bilmasang taxminiy o‘rtacha yoz. Izoh yozma.'
+    )
+
+
+def _lookup_gemini(name: str, unit: str | None = None) -> dict | None:
+    api_key = getattr(settings, 'GEMINI_API_KEY', '') or ''
+    if not api_key.strip():
+        return None
+
+    unit = unit or 'kg'
+    model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.0-flash') or 'gemini-2.0-flash'
+    url = (
+        f'https://generativelanguage.googleapis.com/v1beta/models/'
+        f'{model}:generateContent?key={api_key.strip()}'
+    )
+    body = json.dumps(
+        {
+            'contents': [{'parts': [{'text': _nutrition_prompt(name, unit)}]}],
+            'generationConfig': {
+                'temperature': 0.1,
+                'responseMimeType': 'application/json',
+            },
+        }
+    ).encode()
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            payload = json.loads(resp.read().decode())
+        content = payload['candidates'][0]['content']['parts'][0]['text']
+        data = _parse_nutrition_json(content)
+        if not data:
+            return None
+        return _result_from_data(name, unit, data, 'gemini')
+    except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError, IndexError, TypeError):
+        return None
+
+
+def _lookup_openai(name: str, unit: str | None = None) -> dict | None:
+    """Ixtiyoriy zaxira — asosan Gemini ishlatiladi."""
     api_key = getattr(settings, 'OPENAI_API_KEY', '') or ''
     if not api_key.strip():
         return None
 
     unit = unit or 'kg'
-    prompt = (
-        'Oshxona ombori uchun oziqlanish qiymatini JSON qaytar. '
-        f'Mahsulot: "{name}". Birlik: {unit}. '
-        'Faqat JSON: {"kcal_per_unit": number, "protein": number, "fat": number, '
-        '"carbs": number, "allergens": string, "unit": "kg"|"l"|"dona"}. '
-        'Qiymatlar 1 birlik (1 kg yoki 1 l yoki 1 dona) uchun gramm/kkal. '
-        'Aniq bilmasang taxminiy o‘rtacha yoz.'
-    )
     body = json.dumps(
         {
             'model': getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini'),
@@ -169,7 +257,7 @@ def _lookup_ai(name: str, unit: str | None = None) -> dict | None:
             'response_format': {'type': 'json_object'},
             'messages': [
                 {'role': 'system', 'content': 'You are a nutrition assistant for a canteen. Reply JSON only.'},
-                {'role': 'user', 'content': prompt},
+                {'role': 'user', 'content': _nutrition_prompt(name, unit)},
             ],
         }
     ).encode()
@@ -186,29 +274,16 @@ def _lookup_ai(name: str, unit: str | None = None) -> dict | None:
         with urllib.request.urlopen(req, timeout=12) as resp:
             payload = json.loads(resp.read().decode())
         content = payload['choices'][0]['message']['content']
-        data = json.loads(content)
+        data = _parse_nutrition_json(content)
+        if not data:
+            return None
+        return _result_from_data(name, unit, data, 'openai')
     except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError, IndexError, TypeError):
         return None
 
-    def num(v, default=0):
-        try:
-            return float(Decimal(str(v)))
-        except Exception:
-            return default
 
-    return {
-        'found': True,
-        'source': 'ai',
-        'match': name,
-        'unit': data.get('unit') or unit,
-        'kcal_per_unit': num(data.get('kcal_per_unit')),
-        'protein': num(data.get('protein')),
-        'fat': num(data.get('fat')),
-        'carbs': num(data.get('carbs')),
-        'allergens': str(data.get('allergens') or ''),
-        'note': 'AI taxminiy qiymat — tekshirib saqlang',
-        'suggested_unit': data.get('unit') or unit,
-    }
+def _lookup_ai(name: str, unit: str | None = None) -> dict | None:
+    return _lookup_gemini(name, unit=unit) or _lookup_openai(name, unit=unit)
 
 
 def suggest_nutrition(name: str, unit: str | None = None) -> dict:
