@@ -60,12 +60,8 @@ class ProductForm(StyledFormMixin, forms.ModelForm):
             'fat',
             'carbs',
             'allergens',
-            'expiry_date',
             'is_active',
         ]
-        widgets = {
-            'expiry_date': forms.DateInput(attrs={'type': 'date'}),
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

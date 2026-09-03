@@ -391,6 +391,12 @@ class ViewSmokeTests(TestCase):
         self.assertEqual(resp2.json()['id'], data['id'])
         self.assertFalse(resp2.json()['created'])
 
+    def test_product_form_hides_expiry_field(self):
+        resp = self.client.get(reverse('product_create'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, 'id_expiry_date')
+        self.assertNotContains(resp, 'Muddat')
+
 
 class NavAlertsCacheTests(TestCase):
     def setUp(self):
