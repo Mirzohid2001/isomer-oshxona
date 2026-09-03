@@ -5,6 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}Oshxona{% endblock %}</title>
+  <link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+  <link rel="icon" type="image/png" href="{% static 'img/favicon-32.png' %}" sizes="32x32">
+  <link rel="apple-touch-icon" href="{% static 'img/favicon-180.png' %}">
+  <meta name="theme-color" content="#0a0a0a">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,9 +22,11 @@
 <div class="app-shell">
   <aside class="sidebar" :class="{ 'is-open': navOpen }" @keydown.escape.window="navOpen = false">
     <div class="brand">
-      <div class="brand-mark">O</div>
-      <h1>Oshxona</h1>
-      <p>Neft zavodi oshpaz paneli</p>
+      <img class="brand-logo" src="{% static 'img/isomer-logo.png' %}" alt="Isomer Oil" width="56" height="56">
+      <div class="brand-text">
+        <h1>Oshxona</h1>
+        <p>Isomer Oil · oshpaz paneli</p>
+      </div>
     </div>
     <nav class="nav-group">
       <div class="nav-label">Asosiy</div>

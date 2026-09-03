@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Kirish — Oshxona{% endblock %}
 {% block auth %}
 <div class="login-page">
   <div class="login-card">
-    <div class="brand-mark">O</div>
+    <img class="login-logo" src="{% static 'img/isomer-logo.png' %}" alt="Isomer Oil" width="120" height="120">
     <h1>Oshxona</h1>
-    <p>Neft zavodi oshpaz tizimiga kirish</p>
+    <p>Isomer Oil oshpaz tizimiga kirish</p>
     <form method="post">
       {% csrf_token %}
       {% if form.errors %}

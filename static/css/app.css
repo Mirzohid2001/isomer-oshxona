@@ -125,8 +125,26 @@ textarea {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
   padding: 0.55rem 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-logo {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.brand-text {
+  min-width: 0;
 }
 
 .brand-mark {
@@ -161,18 +179,17 @@ textarea {
 .brand h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 1.05;
 }
 
 .brand p {
-  margin: 0.4rem 0 0;
-  font-size: 0.8rem;
+  margin: 0.28rem 0 0;
+  font-size: 0.78rem;
   opacity: 0.68;
   line-height: 1.35;
-  max-width: 16ch;
 }
 
 .nav-group {
@@ -1227,16 +1244,30 @@ table.data tbody tr:last-child td {
   border-color: rgba(181, 106, 40, 0.55);
 }
 
+.login-logo {
+  display: block;
+  width: 112px;
+  height: 112px;
+  margin: 0 auto;
+  border-radius: 22px;
+  object-fit: cover;
+  background: #0a0a0a;
+  border: 1px solid rgba(18, 32, 26, 0.12);
+  box-shadow: 0 14px 32px rgba(18, 32, 26, 0.16);
+}
+
 .login-card h1 {
-  margin: 0.9rem 0 0.3rem;
+  margin: 1rem 0 0.3rem;
   font-family: var(--font-display);
   font-size: 2.15rem;
   letter-spacing: -0.05em;
+  text-align: center;
 }
 
 .login-card > p {
   margin: 0 0 1.5rem;
   color: var(--muted);
+  text-align: center;
 }
 
 .login-card .form-field {
