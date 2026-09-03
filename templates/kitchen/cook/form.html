@@ -22,6 +22,10 @@
             <button class="btn btn-ghost btn-sm btn-stack" type="button" onclick="document.getElementById('id_portions').value='{{ suggested }}'; document.getElementById('id_portions').dispatchEvent(new Event('change'))">Smenadan: {{ suggested }}</button>
             {% endif %}
           </div>
+          <div class="form-field">
+            <label>{{ form.shift.label }}</label>
+            {{ form.shift }}
+          </div>
           <div class="form-field full">
             <label>{{ form.note.label }}</label>
             {{ form.note }}

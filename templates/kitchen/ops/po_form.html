@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Oshxona{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="panel panel-limited">
+  <div class="panel-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        {% for field in form %}
+        <div class="form-field {% if field.name == 'note' %}full{% endif %}">
+          <label>{{ field.label }}</label>
+          {{ field }}
+        </div>
+        {% endfor %}
+      </div>
+      <h3 class="form-section-title">Qatorlar</h3>
+      {{ formset.management_form }}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Muddat</th><th></th></tr></thead>
+          <tbody>
+            {% for f in formset %}
+            <tr>
+              <td>{% for h in f.hidden_fields %}{{ h }}{% endfor %}{{ f.product }}</td>
+              <td>{{ f.quantity }}</td>
+              <td>{{ f.unit_cost }}</td>
+              <td>{{ f.expiry_date }}</td>
+              <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">Saqlash</button>
+        <a class="btn btn-ghost" href="{% url 'purchase_order_list' %}">Orqaga</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

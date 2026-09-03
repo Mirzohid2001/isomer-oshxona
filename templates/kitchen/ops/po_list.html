@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Xarid buyurtmalari — Oshxona{% endblock %}
+{% block page_title %}Xarid buyurtmalari (PO){% endblock %}
+{% block page_subtitle %}Yetkazuvchiga buyurtma → ombor{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <a class="btn" href="{% url 'purchase_order_create' %}">Yangi PO</a>
+</div>
+<div class="panel">
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>#</th><th>Yetkazuvchi</th><th>Holat</th><th>Sana</th><th></th></tr></thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>PO-{{ o.pk }}</td>
+          <td>{{ o.supplier.name }}</td>
+          <td>{{ o.get_status_display }}</td>
+          <td>{{ o.created_at|date:"d.m.Y" }}</td>
+          <td>
+            {% if o.status != 'received' and o.status != 'cancelled' %}
+            <form method="post" action="{% url 'purchase_order_receive' o.pk %}">{% csrf_token %}
+              <button class="btn btn-sm" type="submit">Qabul qilish</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty">Buyurtma yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "kitchen/partials/pagination.html" %}
+</div>
+{% endblock %}

@@ -6,10 +6,13 @@ from kitchen.models import (
     DailyHeadcount,
     DailyMenu,
     DailyMenuItem,
+    HygieneCheck,
     MenuTemplate,
     MenuTemplateItem,
     MonthlyBudget,
     Product,
+    PurchaseOrder,
+    PurchaseOrderLine,
     Recipe,
     RecipeItem,
     Supplier,
@@ -50,6 +53,7 @@ class ProductForm(StyledFormMixin, forms.ModelForm):
             'name',
             'category',
             'unit',
+            'default_location',
             'min_stock',
             'kcal_per_unit',
             'protein',
@@ -63,6 +67,12 @@ class ProductForm(StyledFormMixin, forms.ModelForm):
             'expiry_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from kitchen.models import StorageLocation
+        self.fields['default_location'].queryset = StorageLocation.objects.filter(is_active=True)
+        self.fields['default_location'].required = False
+
 
 class ReceiptForm(StyledFormMixin, forms.Form):
     product = forms.ModelChoiceField(queryset=Product.objects.filter(is_active=True), label='Mahsulot')
@@ -74,7 +84,17 @@ class ReceiptForm(StyledFormMixin, forms.Form):
         label='Yetkazib beruvchi',
     )
     expiry_date = forms.DateField(required=False, label='Muddat', widget=forms.DateInput(attrs={'type': 'date'}))
+    location = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        label='Ombor joyi',
+    )
     note = forms.CharField(required=False, label='Izoh')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from kitchen.models import StorageLocation
+        self.fields['location'].queryset = StorageLocation.objects.filter(is_active=True)
 
 
 class AdjustStockForm(StyledFormMixin, forms.Form):
@@ -138,7 +158,38 @@ RecipeItemFormSet = inlineformset_factory(
 class CookForm(StyledFormMixin, forms.Form):
     recipe = forms.ModelChoiceField(queryset=Recipe.objects.filter(is_active=True), label='Ovqat')
     portions = forms.IntegerField(min_value=1, initial=50, label='Porsiya')
+    shift = forms.ChoiceField(
+        choices=[('', '—')] + list(DailyHeadcount._meta.get_field('shift').choices),
+        required=False,
+        label='Smena',
+    )
     note = forms.CharField(required=False, label='Izoh')
+
+
+class HygieneCheckForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = HygieneCheck
+        fields = ['check_type', 'location', 'is_ok', 'value', 'note']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from kitchen.models import StorageLocation
+        self.fields['location'].queryset = StorageLocation.objects.filter(is_active=True)
+        self.fields['location'].required = False
+
+
+class PurchaseOrderForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = PurchaseOrder
+        fields = ['supplier', 'note', 'ordered_at']
+        widgets = {'ordered_at': forms.DateInput(attrs={'type': 'date'})}
+
+
+class PurchaseOrderLineForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = PurchaseOrderLine
+        fields = ['product', 'quantity', 'unit_cost', 'expiry_date']
+        widgets = {'expiry_date': forms.DateInput(attrs={'type': 'date'})}
 
 
 class DailyMenuItemForm(StyledFormMixin, forms.ModelForm):

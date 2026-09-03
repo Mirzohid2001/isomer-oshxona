@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Tasdiqlar — Oshxona{% endblock %}
+{% block page_title %}Tuzatish / chiqindi so‘rovlari{% endblock %}
+{% block page_subtitle %}Faqat admin tasdiqlaydi{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Vaqt</th><th>Tur</th><th>Mahsulot</th><th>Miqdor</th><th>Kim</th><th>Izoh</th><th></th></tr></thead>
+      <tbody>
+        {% for r in pending %}
+        <tr>
+          <td>{{ r.created_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ r.get_request_type_display }}</td>
+          <td>{{ r.product.name }}</td>
+          <td>{% if r.new_quantity %}→ {{ r.new_quantity }}{% else %}{{ r.quantity }}{% endif %}</td>
+          <td>{{ r.requested_by }}</td>
+          <td>{{ r.note }}</td>
+          <td class="cell-actions">
+            {% if user.is_staff %}
+            <form method="post" action="{% url 'approval_review' r.pk %}" class="form-inline">{% csrf_token %}
+              <button class="btn btn-sm" name="decision" value="approve" type="submit">Tasdiq</button>
+              <button class="btn btn-ghost btn-sm" name="decision" value="reject" type="submit">Rad</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">Kutilayotgan so‘rov yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}KDS — Oshxona{% endblock %}
+{% block page_title %}Oshxona doskasi (KDS){% endblock %}
+{% block page_subtitle %}Navbat va bugungi pishirishlar{% endblock %}
+{% block content %}
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-head"><h3>Navbatga qo‘yish</h3></div>
+    <div class="panel-body">
+      <form method="post" action="{% url 'kds_queue' %}">
+        {% csrf_token %}
+        <div class="form-grid">
+          {% for field in queue_form %}
+          <div class="form-field {% if field.name == 'note' %}full{% endif %}">
+            <label>{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Navbatga</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Navbat</h3></div>
+    <div class="panel-body">
+      {% for b in queued %}
+      <div class="alert-row">
+        <span><strong>{{ b.recipe.name }}</strong> × {{ b.portions }}{% if b.shift %} · smena {{ b.shift }}{% endif %}</span>
+        <form method="post" action="{% url 'kds_start' b.pk %}">{% csrf_token %}
+          <button class="btn btn-sm" type="submit">Boshlash</button>
+        </form>
+      </div>
+      {% empty %}
+      <p class="empty">Navbat bo‘sh</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Bugun tayyor</h3></div>
+    <div class="panel-body">
+      {% for b in done_today %}
+      <div class="alert-row">
+        <a href="{% url 'cook_detail' b.pk %}">{{ b.recipe.name }} × {{ b.portions }}</a>
+        <span class="badge badge-ok">OK</span>
+      </div>
+      {% empty %}
+      <p class="empty">Hali yo‘q</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

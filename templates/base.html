@@ -38,6 +38,11 @@
       <div class="nav-label">Reja</div>
       <a class="nav-link {% if 'headcount' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'headcount_list' %}" @click="navOpen = false">Smena / odam</a>
       <a class="nav-link {% if 'shopping' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'shopping_list' %}" @click="navOpen = false">Xarid ro‘yxati</a>
+      <a class="nav-link {% if 'purchase' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'purchase_order_list' %}" @click="navOpen = false">PO / buyurtma</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'lot_list' %}is-active{% endif %}" href="{% url 'lot_list' %}" @click="navOpen = false">Partiyalar</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'kds_board' %}is-active{% endif %}" href="{% url 'kds_board' %}" @click="navOpen = false">KDS doska</a>
+      <a class="nav-link {% if 'hygiene' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'hygiene_list' %}" @click="navOpen = false">Gigiyena</a>
+      <a class="nav-link {% if 'approval' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'approval_list' %}" @click="navOpen = false">Tasdiqlar</a>
       <a class="nav-link {% if 'budget' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'budget_page' %}" @click="navOpen = false">Byudjet</a>
       <a class="nav-link {% if 'report' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'reports' %}" @click="navOpen = false">Analitika</a>
       <a class="nav-link {% if 'audit' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'audit_list' %}" @click="navOpen = false">Audit</a>

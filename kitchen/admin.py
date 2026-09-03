@@ -8,13 +8,19 @@ from kitchen.models import (
     DailyHeadcount,
     DailyMenu,
     DailyMenuItem,
+    HygieneCheck,
     MenuTemplate,
     MenuTemplateItem,
     MonthlyBudget,
     Product,
+    PurchaseOrder,
+    PurchaseOrderLine,
     Recipe,
     RecipeItem,
+    StockChangeRequest,
+    StockLot,
     StockMovement,
+    StorageLocation,
     Supplier,
 )
 
@@ -40,6 +46,11 @@ class MenuTemplateItemInline(admin.TabularInline):
     extra = 1
 
 
+class PurchaseOrderLineInline(admin.TabularInline):
+    model = PurchaseOrderLine
+    extra = 1
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
@@ -51,6 +62,11 @@ class SupplierAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
+@admin.register(StorageLocation)
+class StorageLocationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'is_active']
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ['name', 'category', 'unit', 'quantity', 'avg_cost', 'min_stock', 'is_active']
@@ -58,10 +74,32 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
+@admin.register(StockLot)
+class StockLotAdmin(admin.ModelAdmin):
+    list_display = ['product', 'quantity', 'unit_cost', 'expiry_date', 'location', 'received_at']
+    list_filter = ['location']
+
+
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
     list_display = ['created_at', 'movement_type', 'product', 'quantity', 'unit_cost', 'total_cost']
     list_filter = ['movement_type']
+
+
+@admin.register(StockChangeRequest)
+class StockChangeRequestAdmin(admin.ModelAdmin):
+    list_display = ['created_at', 'request_type', 'product', 'status', 'requested_by']
+
+
+@admin.register(PurchaseOrder)
+class PurchaseOrderAdmin(admin.ModelAdmin):
+    list_display = ['id', 'supplier', 'status', 'created_at']
+    inlines = [PurchaseOrderLineInline]
+
+
+@admin.register(HygieneCheck)
+class HygieneCheckAdmin(admin.ModelAdmin):
+    list_display = ['checked_at', 'check_type', 'location', 'is_ok', 'checked_by']
 
 
 @admin.register(Recipe)
@@ -72,7 +110,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 @admin.register(CookBatch)
 class CookBatchAdmin(admin.ModelAdmin):
-    list_display = ['cooked_at', 'recipe', 'portions', 'total_cost', 'status']
+    list_display = ['cooked_at', 'recipe', 'portions', 'shift', 'total_cost', 'status']
     inlines = [CookBatchItemInline]
 
 

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Gigiyena — Oshxona{% endblock %}
+{% block page_title %}Gigiyena / HACCP yozuvlari{% endblock %}
+{% block page_subtitle %}Harorat, tozalik, qo‘l nazorati{% endblock %}
+{% block content %}
+<div class="panel-grid">
+  <div class="panel">
+    <div class="panel-head"><h3>Yangi yozuv</h3></div>
+    <div class="panel-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-grid">
+          {% for field in form %}
+          <div class="form-field">
+            <label>{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="form-actions"><button class="btn" type="submit">Saqlash</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h3>Tarix</h3></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Vaqt</th><th>Tur</th><th>Joy</th><th>OK</th><th>Qiymat</th></tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.checked_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ r.get_check_type_display }}</td>
+            <td>{{ r.location|default:"—" }}</td>
+            <td>{% if r.is_ok %}<span class="badge badge-ok">OK</span>{% else %}<span class="badge badge-danger">Yo‘q</span>{% endif %}</td>
+            <td>{{ r.value }} {{ r.note }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty">Yo‘q</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "kitchen/partials/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

@@ -124,6 +124,14 @@ class Product(models.Model):
     )
     allergens = models.CharField('Allergenlar', max_length=255, blank=True)
     expiry_date = models.DateField('Muddat', null=True, blank=True)
+    default_location = models.ForeignKey(
+        'StorageLocation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name='Asosiy joy',
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -131,6 +139,10 @@ class Product(models.Model):
         ordering = ['name']
         verbose_name = 'Mahsulot'
         verbose_name_plural = 'Mahsulotlar'
+        indexes = [
+            models.Index(fields=['is_active', 'quantity'], name='kit_prod_active_qty'),
+            models.Index(fields=['expiry_date'], name='kit_prod_expiry'),
+        ]
 
     def __str__(self):
         return self.name
@@ -188,14 +200,108 @@ class StockMovement(models.Model):
         related_name='stock_movements',
     )
     created_at = models.DateTimeField(default=timezone.now)
+    location = models.ForeignKey(
+        'StorageLocation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='movements',
+    )
 
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Ombor harakati'
         verbose_name_plural = 'Ombor harakatlari'
+        indexes = [
+            models.Index(fields=['-created_at'], name='kit_move_created'),
+            models.Index(fields=['movement_type', '-created_at'], name='kit_move_type_created'),
+            models.Index(fields=['product', '-created_at'], name='kit_move_prod_created'),
+        ]
 
     def __str__(self):
         return f'{self.get_movement_type_display()} — {self.product}'
+
+
+class StorageLocation(models.Model):
+    """Ombor zonasi / oshxona joyi (sovuqxona, quruq ombor, …)."""
+
+    name = models.CharField('Nomi', max_length=120, unique=True)
+    code = models.CharField('Kod', max_length=32, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Ombor joyi'
+        verbose_name_plural = 'Ombor joylari'
+
+    def __str__(self):
+        return self.name
+
+
+class StockLot(models.Model):
+    """Partiya — FEFO uchun muddat bo‘yicha sarflash."""
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='lots')
+    location = models.ForeignKey(
+        StorageLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lots',
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+    )
+    unit_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+    )
+    expiry_date = models.DateField(null=True, blank=True)
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lots',
+    )
+    received_at = models.DateTimeField(default=timezone.now)
+    source_movement = models.ForeignKey(
+        StockMovement,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_lots',
+    )
+    note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['expiry_date', 'received_at', 'id']
+        verbose_name = 'Partiya'
+        verbose_name_plural = 'Partiyalar'
+        indexes = [
+            models.Index(fields=['product', 'expiry_date', 'received_at'], name='kit_lot_fefo'),
+            models.Index(fields=['product', 'quantity'], name='kit_lot_prod_qty'),
+        ]
+
+    def __str__(self):
+        return f'{self.product} · {self.quantity} · {self.expiry_date or "muddatsiz"}'
+
+
+class StockLotAllocation(models.Model):
+    """Rasxod qaysi partiyadan olingani."""
+
+    lot = models.ForeignKey(StockLot, on_delete=models.PROTECT, related_name='allocations')
+    movement = models.ForeignKey(StockMovement, on_delete=models.CASCADE, related_name='lot_allocations')
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    unit_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
+
+    class Meta:
+        ordering = ['id']
 
 
 class Recipe(models.Model):
@@ -240,12 +346,21 @@ class RecipeItem(models.Model):
 
 class CookBatch(models.Model):
     class Status(models.TextChoices):
+        QUEUED = 'queued', 'Navbat'
+        COOKING = 'cooking', 'Tayyorlanmoqda'
         DONE = 'done', 'Bajarildi'
         CANCELLED = 'cancelled', 'Bekor'
 
     recipe = models.ForeignKey(Recipe, on_delete=models.PROTECT, related_name='batches')
     portions = models.PositiveIntegerField()
     cooked_at = models.DateTimeField(default=timezone.now)
+    shift = models.CharField(
+        'Smena',
+        max_length=2,
+        choices=Shift.choices,
+        blank=True,
+        default='',
+    )
     total_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
     cost_per_portion = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0'))
     total_kcal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0'))
@@ -267,6 +382,10 @@ class CookBatch(models.Model):
         ordering = ['-cooked_at']
         verbose_name = 'Pishirish'
         verbose_name_plural = 'Pishirishlar'
+        indexes = [
+            models.Index(fields=['-cooked_at'], name='kit_cook_cooked'),
+            models.Index(fields=['status', '-cooked_at'], name='kit_cook_status'),
+        ]
 
     def __str__(self):
         return f'{self.recipe} × {self.portions}'
@@ -377,3 +496,133 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at'], name='kit_audit_created'),
+            models.Index(fields=['action', '-created_at'], name='kit_audit_action'),
+        ]
+
+
+class ApprovalStatus(models.TextChoices):
+    PENDING = 'pending', 'Kutilmoqda'
+    APPROVED = 'approved', 'Tasdiqlangan'
+    REJECTED = 'rejected', 'Rad etilgan'
+
+
+class StockChangeRequest(models.Model):
+    """Tuzatish / chiqindi — staff tasdiqlashi mumkin."""
+
+    class RequestType(models.TextChoices):
+        ADJUST = 'adjust', 'Tuzatish'
+        WASTE = 'waste', 'Chiqindi'
+
+    request_type = models.CharField(max_length=10, choices=RequestType.choices)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='change_requests')
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    new_quantity = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=12,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.PENDING,
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_change_requests',
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_change_reviews',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class PurchaseOrder(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'Qoralama'
+        ORDERED = 'ordered', 'Buyurtma'
+        RECEIVED = 'received', 'Qabul qilingan'
+        CANCELLED = 'cancelled', 'Bekor'
+
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.PROTECT,
+        related_name='purchase_orders',
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    note = models.CharField(max_length=255, blank=True)
+    ordered_at = models.DateField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'PO-{self.pk} · {self.supplier}'
+
+
+class PurchaseOrderLine(models.Model):
+    order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='lines')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(Decimal('0.001'))],
+    )
+    unit_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+    )
+    expiry_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['id']
+
+
+class HygieneCheck(models.Model):
+    """Oddiy HACCP / sanitariya yozuvi."""
+
+    class CheckType(models.TextChoices):
+        TEMP = 'temp', 'Harorat'
+        CLEAN = 'clean', 'Tozalik'
+        HAND = 'hand', 'Qo‘l gigiyenasi'
+        OTHER = 'other', 'Boshqa'
+
+    checked_at = models.DateTimeField(default=timezone.now)
+    check_type = models.CharField(max_length=12, choices=CheckType.choices)
+    location = models.ForeignKey(
+        StorageLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hygiene_checks',
+    )
+    is_ok = models.BooleanField(default=True)
+    value = models.CharField(max_length=80, blank=True, help_text='Masalan harorat °C')
+    note = models.CharField(max_length=255, blank=True)
+    checked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ['-checked_at']
