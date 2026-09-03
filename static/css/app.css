@@ -1952,6 +1952,14 @@ table.data tbody tr:last-child td {
   display: inline;
 }
 
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .stat-value-sm {
   font-size: 1.05rem;
 }
