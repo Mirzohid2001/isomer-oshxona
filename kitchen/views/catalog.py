@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
@@ -110,6 +111,22 @@ def product_toggle(request, pk):
 
 
 @login_required
+def category_list(request):
+    q = (request.GET.get('q') or '').strip()
+    categories = Category.objects.annotate(
+        product_count=Count('products'),
+        active_count=Count('products', filter=Q(products__is_active=True)),
+    )
+    if q:
+        categories = categories.filter(name__icontains=q)
+    return render(
+        request,
+        'kitchen/categories/list.html',
+        {'categories': categories, 'q': q},
+    )
+
+
+@login_required
 def category_create(request):
     form = CategoryForm(request.POST or None)
     next_url = request.GET.get('next') or request.POST.get('next') or ''
@@ -120,7 +137,7 @@ def category_create(request):
         if next_url.startswith('/'):
             sep = '&' if '?' in next_url else '?'
             return redirect(f'{next_url}{sep}category={cat.pk}')
-        return redirect('product_list')
+        return redirect('category_list')
     return render(
         request,
         'kitchen/form_page.html',
@@ -130,6 +147,40 @@ def category_create(request):
             'next': next_url,
         },
     )
+
+
+@login_required
+def category_edit(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    form = CategoryForm(request.POST or None, instance=category)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        log_action(request.user, 'tahrir', 'category', category.pk, category.name)
+        messages.success(request, 'Kategoriya yangilandi.')
+        return redirect('category_list')
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {'form': form, 'title': f'Tahrir: {category.name}'},
+    )
+
+
+@login_required
+@require_POST
+def category_delete(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    count = category.products.count()
+    if count:
+        messages.error(
+            request,
+            f'«{category.name}» o‘chirib bo‘lmaydi — {count} ta mahsulot bog‘langan.',
+        )
+        return redirect('category_list')
+    name = category.name
+    category.delete()
+    log_action(request.user, 'o‘chirish', 'category', pk, name)
+    messages.success(request, f'Kategoriya o‘chirildi: {name}')
+    return redirect('category_list')
 
 
 @login_required

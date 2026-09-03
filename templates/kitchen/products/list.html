@@ -7,7 +7,7 @@
 <div class="toolbar">
   <div class="toolbar-actions">
   <a class="btn" href="{% url 'product_create' %}">Yangi mahsulot</a>
-  <a class="btn btn-ghost" href="{% url 'category_create' %}">Kategoriya</a>
+  <a class="btn btn-ghost" href="{% url 'category_list' %}">Kategoriyalar</a>
   <a class="btn {% if show == 'active' %}btn-accent{% else %}btn-ghost{% endif %}" href="?show=active">Faol</a>
   <a class="btn {% if show == 'inactive' %}btn-accent{% else %}btn-ghost{% endif %}" href="?show=inactive">Arxiv</a>
   <a class="btn {% if show == 'all' %}btn-accent{% else %}btn-ghost{% endif %}" href="?show=all">Barchasi</a>

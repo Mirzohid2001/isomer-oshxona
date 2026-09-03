@@ -32,6 +32,7 @@
       <div class="nav-label">Asosiy</div>
       <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}" @click="navOpen = false">Bosh sahifa</a>
       <a class="nav-link {% if 'product' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'product_list' %}" @click="navOpen = false">Mahsulotlar</a>
+      <a class="nav-link {% if 'categor' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'category_list' %}" @click="navOpen = false">Kategoriyalar</a>
       <a class="nav-link {% if 'stock' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'stock_list' %}" @click="navOpen = false">Ombor{% if nav_low_stock %}<span class="nav-badge">{{ nav_low_stock }}</span>{% endif %}</a>
       <a class="nav-link {% if 'receipt' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'receipt_list' %}" @click="navOpen = false">Prixodlar</a>
       <a class="nav-link {% if 'supplier' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'supplier_list' %}" @click="navOpen = false">Yetkazuvchilar</a>

@@ -357,6 +357,7 @@ class ViewSmokeTests(TestCase):
         for name in [
             'dashboard',
             'product_list',
+            'category_list',
             'stock_list',
             'lot_list',
             'approval_list',
