@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_POST
@@ -54,6 +55,9 @@ def product_list(request):
 @login_required
 def product_create(request):
     form = ProductForm(request.POST or None)
+    category_id = request.GET.get('category')
+    if category_id and not request.POST:
+        form = ProductForm(initial={'category': category_id})
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Mahsulot qo‘shildi.')
@@ -65,6 +69,14 @@ def product_create(request):
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk)
     form = ProductForm(request.POST or None, instance=product)
+    if request.method != 'POST':
+        category_id = request.GET.get('category')
+        if category_id:
+            try:
+                form.instance.category_id = int(category_id)
+                form.initial['category'] = category_id
+            except (TypeError, ValueError):
+                pass
     if request.method == 'POST' and form.is_valid():
         form.save()
         log_action(request.user, 'tahrir', 'product', product.pk, product.name)
@@ -100,11 +112,44 @@ def product_toggle(request, pk):
 @login_required
 def category_create(request):
     form = CategoryForm(request.POST or None)
+    next_url = request.GET.get('next') or request.POST.get('next') or ''
     if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, 'Kategoriya qo‘shildi.')
+        cat = form.save()
+        log_action(request.user, 'kategoriya', 'category', cat.pk, cat.name)
+        messages.success(request, f'Kategoriya qo‘shildi: {cat.name}')
+        if next_url.startswith('/'):
+            sep = '&' if '?' in next_url else '?'
+            return redirect(f'{next_url}{sep}category={cat.pk}')
         return redirect('product_list')
-    return render(request, 'kitchen/form_page.html', {'form': form, 'title': 'Kategoriya'})
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {
+            'form': form,
+            'title': 'Yangi kategoriya',
+            'next': next_url,
+        },
+    )
+
+
+@login_required
+@require_POST
+def category_quick_create(request):
+    name = (request.POST.get('name') or '').strip()
+    if not name:
+        return JsonResponse({'ok': False, 'error': 'Nom bo‘sh bo‘lmasin.'}, status=400)
+    if len(name) > 120:
+        return JsonResponse({'ok': False, 'error': 'Nom juda uzun.'}, status=400)
+    try:
+        cat, created = Category.objects.get_or_create(name=name)
+    except IntegrityError:
+        cat = Category.objects.filter(name__iexact=name).first()
+        created = False
+        if cat is None:
+            return JsonResponse({'ok': False, 'error': 'Saqlab bo‘lmadi.'}, status=400)
+    if created:
+        log_action(request.user, 'kategoriya', 'category', cat.pk, cat.name)
+    return JsonResponse({'ok': True, 'id': cat.pk, 'name': cat.name, 'created': created})
 
 
 @login_required

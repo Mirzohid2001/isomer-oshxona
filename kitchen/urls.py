@@ -11,6 +11,7 @@ urlpatterns = [
     path('products/<int:pk>/toggle/', views.product_toggle, name='product_toggle'),
     path('products/nutrition-suggest/', views.product_nutrition_suggest, name='product_nutrition_suggest'),
     path('categories/new/', views.category_create, name='category_create'),
+    path('categories/quick/', views.category_quick_create, name='category_quick_create'),
     path('suppliers/', views.supplier_list, name='supplier_list'),
     path('suppliers/new/', views.supplier_create, name='supplier_create'),
     path('suppliers/<int:pk>/edit/', views.supplier_edit, name='supplier_edit'),

@@ -379,6 +379,17 @@ class ViewSmokeTests(TestCase):
         self.assertTrue(data['found'])
         self.assertIn('kcal_per_unit', data)
 
+    def test_category_quick_create(self):
+        resp = self.client.post(reverse('category_quick_create'), {'name': 'Donlar'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['ok'])
+        self.assertTrue(Category.objects.filter(name='Donlar').exists())
+        # duplicate -> same id
+        resp2 = self.client.post(reverse('category_quick_create'), {'name': 'Donlar'})
+        self.assertEqual(resp2.json()['id'], data['id'])
+        self.assertFalse(resp2.json()['created'])
+
 
 class NavAlertsCacheTests(TestCase):
     def setUp(self):

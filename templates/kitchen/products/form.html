@@ -19,6 +19,16 @@
             </button>
           </div>
           <div class="field-help" id="nutrition-hint">Nomni yozib «Avto to‘ldirish» bosing — kkal, oqsil, yog‘, uglevod avtomatik chiqadi.</div>
+          {% elif field.name == 'category' %}
+          <div class="field-with-action">
+            {{ field }}
+            <button class="btn btn-ghost btn-sm" type="button" id="btn-category-toggle">+ Yangi</button>
+          </div>
+          <div class="quick-add" id="category-quick" hidden>
+            <input class="form-input" type="text" id="new-category-name" maxlength="120" placeholder="Masalan: Don mahsulotlari" autocomplete="off">
+            <button class="btn btn-sm" type="button" id="btn-category-save">Qo‘shish</button>
+          </div>
+          <div class="field-help" id="category-hint">Ro‘yxatda yo‘q bo‘lsa — «+ Yangi» bilan shu yerda qo‘shing.</div>
           {% else %}
           {{ field }}
           {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
@@ -38,9 +48,10 @@
 {% block scripts %}
 <script>
 (function () {
-  const btn = document.getElementById('btn-nutrition-fill');
-  const hint = document.getElementById('nutrition-hint');
-  if (!btn) return;
+  function csrfToken() {
+    const el = document.querySelector('#product-form [name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
 
   function setVal(id, value) {
     const el = document.getElementById(id);
@@ -49,49 +60,119 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  btn.addEventListener('click', async function () {
-    const name = (document.getElementById('id_name') || {}).value || '';
-    const unit = (document.getElementById('id_unit') || {}).value || '';
-    if (!name.trim()) {
-      hint.textContent = 'Avval mahsulot nomini yozing.';
-      hint.classList.add('is-warn');
-      return;
-    }
-    btn.disabled = true;
-    btn.textContent = 'Qidirilmoqda…';
-    hint.classList.remove('is-warn', 'is-ok');
-    try {
-      const url = '{% url "product_nutrition_suggest" %}?name=' + encodeURIComponent(name) + '&unit=' + encodeURIComponent(unit);
-      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      const data = await resp.json();
-      if (!data.found) {
-        hint.textContent = data.note || 'Topilmadi.';
+  // Nutrition auto-fill
+  const btn = document.getElementById('btn-nutrition-fill');
+  const hint = document.getElementById('nutrition-hint');
+  if (btn) {
+    btn.addEventListener('click', async function () {
+      const name = (document.getElementById('id_name') || {}).value || '';
+      const unit = (document.getElementById('id_unit') || {}).value || '';
+      if (!name.trim()) {
+        hint.textContent = 'Avval mahsulot nomini yozing.';
         hint.classList.add('is-warn');
         return;
       }
-      setVal('id_kcal_per_unit', data.kcal_per_unit);
-      setVal('id_protein', data.protein);
-      setVal('id_fat', data.fat);
-      setVal('id_carbs', data.carbs);
-      if (data.allergens) setVal('id_allergens', data.allergens);
-      if (data.suggested_unit) {
-        const u = document.getElementById('id_unit');
-        if (u) {
-          u.value = data.suggested_unit;
-          u.dispatchEvent(new Event('change', { bubbles: true }));
+      btn.disabled = true;
+      btn.textContent = 'Qidirilmoqda…';
+      hint.classList.remove('is-warn', 'is-ok');
+      try {
+        const url = '{% url "product_nutrition_suggest" %}?name=' + encodeURIComponent(name) + '&unit=' + encodeURIComponent(unit);
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const data = await resp.json();
+        if (!data.found) {
+          hint.textContent = data.note || 'Topilmadi.';
+          hint.classList.add('is-warn');
+          return;
         }
+        setVal('id_kcal_per_unit', data.kcal_per_unit);
+        setVal('id_protein', data.protein);
+        setVal('id_fat', data.fat);
+        setVal('id_carbs', data.carbs);
+        if (data.allergens) setVal('id_allergens', data.allergens);
+        if (data.suggested_unit) setVal('id_unit', data.suggested_unit);
+        const src = data.source === 'ai' ? 'AI' : 'baza';
+        hint.textContent = (data.note || 'To‘ldirildi') + ' · manba: ' + src;
+        hint.classList.add('is-ok');
+      } catch (e) {
+        hint.textContent = 'Xatolik: qayta urinib ko‘ring.';
+        hint.classList.add('is-warn');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Avto to‘ldirish';
       }
-      const src = data.source === 'ai' ? 'AI' : 'baza';
-      hint.textContent = (data.note || 'To‘ldirildi') + ' · manba: ' + src;
-      hint.classList.add('is-ok');
-    } catch (e) {
-      hint.textContent = 'Xatolik: qayta urinib ko‘ring.';
-      hint.classList.add('is-warn');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Avto to‘ldirish';
+    });
+  }
+
+  // Category quick add
+  const toggle = document.getElementById('btn-category-toggle');
+  const panel = document.getElementById('category-quick');
+  const saveBtn = document.getElementById('btn-category-save');
+  const nameInput = document.getElementById('new-category-name');
+  const catHint = document.getElementById('category-hint');
+  const select = document.getElementById('id_category');
+
+  if (toggle && panel && saveBtn && nameInput && select) {
+    toggle.addEventListener('click', function () {
+      panel.hidden = !panel.hidden;
+      if (!panel.hidden) nameInput.focus();
+    });
+
+    async function createCategory() {
+      const name = nameInput.value.trim();
+      if (!name) {
+        catHint.textContent = 'Kategoriya nomini yozing.';
+        catHint.classList.add('is-warn');
+        return;
+      }
+      saveBtn.disabled = true;
+      try {
+        const body = new URLSearchParams({ name: name });
+        const resp = await fetch('{% url "category_quick_create" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken(),
+          },
+          body: body.toString(),
+        });
+        const data = await resp.json();
+        if (!data.ok) {
+          catHint.textContent = data.error || 'Xato.';
+          catHint.classList.add('is-warn');
+          return;
+        }
+        let opt = Array.from(select.options).find(o => o.value === String(data.id));
+        if (!opt) {
+          opt = new Option(data.name, data.id, true, true);
+          select.add(opt);
+        } else {
+          opt.selected = true;
+        }
+        select.value = String(data.id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        nameInput.value = '';
+        panel.hidden = true;
+        catHint.textContent = data.created
+          ? ('Qo‘shildi: ' + data.name)
+          : ('Allaqachon bor edi: ' + data.name);
+        catHint.classList.remove('is-warn');
+        catHint.classList.add('is-ok');
+      } catch (e) {
+        catHint.textContent = 'Xatolik: qayta urinib ko‘ring.';
+        catHint.classList.add('is-warn');
+      } finally {
+        saveBtn.disabled = false;
+      }
     }
-  });
+
+    saveBtn.addEventListener('click', createCategory);
+    nameInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        createCategory();
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}

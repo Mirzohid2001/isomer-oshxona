@@ -1,5 +1,6 @@
 from kitchen.views.catalog import (
     category_create,
+    category_quick_create,
     product_create,
     product_edit,
     product_list,
@@ -86,6 +87,7 @@ __all__ = [
     'product_toggle',
     'product_nutrition_suggest',
     'category_create',
+    'category_quick_create',
     'supplier_list',
     'supplier_create',
     'supplier_edit',

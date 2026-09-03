@@ -2082,6 +2082,18 @@ table.data tbody tr:last-child td {
   white-space: nowrap;
 }
 
+.quick-add {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  align-items: stretch;
+}
+
+.quick-add .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .field-error,
 .flash-spaced {
   margin-top: 0.4rem;
