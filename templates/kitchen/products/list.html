@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize kitchen_tags %}
 {% block title %}Mahsulotlar — Oshxona{% endblock %}
 {% block page_title %}Mahsulotlar{% endblock %}
 {% block page_subtitle %}Spravochnik va joriy ombor holati{% endblock %}
@@ -38,7 +38,7 @@
         <tr>
           <td><strong>{{ p.name }}</strong>{% if not p.is_active %} <span class="badge badge-mute">arxiv</span>{% endif %}</td>
           <td>{{ p.category.name }}</td>
-          <td>{{ p.quantity }} {{ p.unit }}</td>
+          <td>{{ p.quantity|smart_qty }} {{ p.unit }}</td>
           <td>{{ p.avg_cost|floatformat:0|intcomma }}</td>
           <td>{{ p.kcal_per_unit|floatformat:0 }} / {{ p.unit }}</td>
           <td>

@@ -40,7 +40,8 @@ from kitchen.services.nutrition_lookup import lookup_local, suggest_nutrition
 from kitchen.services.precision import money, qty, weighted_avg
 from kitchen.services.recipe_cost import recipe_nutrition
 from kitchen.services.shopping import shopping_list_for_range
-from kitchen.services.stock import StockError, consume_stock, preview_fefo_allocation, receive_stock
+from kitchen.services.stock import StockError, consume_stock, preview_fefo_allocation, receive_stock, update_receipt
+from kitchen.templatetags.kitchen_tags import smart_qty
 from kitchen.utils import local_date_span_bounds, local_day_bounds
 
 
@@ -773,4 +774,99 @@ class FormFeedbackTests(TestCase):
         self.assertContains(resp, 'formset-table')
         hc = self.client.get(reverse('headcount_list'))
         self.assertEqual(hc.status_code, 200)
+
+
+class ReceiptEditAndQtyFormatTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user('rec', 'r@t.t', 'pass', is_staff=True)
+        self.client = Client()
+        self.client.login(username='rec', password='pass')
+        self.cat = Category.objects.create(name='RecCat')
+        self.supplier = Supplier.objects.create(name='Yetkaz')
+        self.product = Product.objects.create(name='UnR', category=self.cat, unit=Unit.KG)
+
+    def test_smart_qty_strips_trailing_zeros(self):
+        self.assertEqual(smart_qty(Decimal('2.000')), '2')
+        self.assertEqual(smart_qty(Decimal('1.500')), '1.5')
+        self.assertEqual(smart_qty(Decimal('12.700')), '12.7')
+
+    def test_receipt_list_shows_edit_and_smart_qty(self):
+        receive_stock(
+            product=self.product,
+            quantity=Decimal('2'),
+            unit_cost=Decimal('10000'),
+            user=self.user,
+            supplier=self.supplier,
+        )
+        resp = self.client.get(reverse('receipt_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Tahrirlash')
+        self.assertContains(resp, '2 kg')
+        self.assertNotContains(resp, '2.000')
+
+    def test_update_receipt_changes_qty_and_cost(self):
+        movement = receive_stock(
+            product=self.product,
+            quantity=Decimal('10'),
+            unit_cost=Decimal('5000'),
+            user=self.user,
+            supplier=self.supplier,
+        )
+        update_receipt(
+            movement=movement,
+            quantity=Decimal('12'),
+            unit_cost=Decimal('6000'),
+            user=self.user,
+            supplier=self.supplier,
+        )
+        movement.refresh_from_db()
+        self.product.refresh_from_db()
+        lot = StockLot.objects.get(source_movement=movement)
+        self.assertEqual(movement.quantity, Decimal('12.000'))
+        self.assertEqual(movement.unit_cost, Decimal('6000.00'))
+        self.assertEqual(movement.total_cost, Decimal('72000.00'))
+        self.assertEqual(lot.quantity, Decimal('12.000'))
+        self.assertEqual(lot.unit_cost, Decimal('6000.00'))
+        self.assertEqual(self.product.quantity, Decimal('12.000'))
+        self.assertEqual(self.product.avg_cost, Decimal('6000.00'))
+
+    def test_update_receipt_blocked_below_consumed(self):
+        movement = receive_stock(
+            product=self.product,
+            quantity=Decimal('10'),
+            unit_cost=Decimal('5000'),
+            user=self.user,
+        )
+        consume_stock(product=self.product, quantity=Decimal('4'), user=self.user)
+        with self.assertRaises(StockError):
+            update_receipt(
+                movement=movement,
+                quantity=Decimal('3'),
+                unit_cost=Decimal('5000'),
+                user=self.user,
+            )
+
+    def test_receipt_edit_page_post(self):
+        movement = receive_stock(
+            product=self.product,
+            quantity=Decimal('5'),
+            unit_cost=Decimal('8000'),
+            user=self.user,
+            supplier=self.supplier,
+        )
+        resp = self.client.post(
+            reverse('receipt_edit', args=[movement.pk]),
+            {
+                'quantity': '7',
+                'unit_cost': '9000',
+                'supplier': self.supplier.pk,
+                'expiry_date': '',
+                'location': '',
+                'note': 'tuzatildi',
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        movement.refresh_from_db()
+        self.assertEqual(movement.quantity, Decimal('7.000'))
+        self.assertEqual(movement.note, 'tuzatildi')
 

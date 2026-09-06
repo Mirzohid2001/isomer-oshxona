@@ -24,6 +24,7 @@ urlpatterns = [
     path('movements/<int:pk>/', views.movement_detail, name='movement_detail'),
     path('receipts/', views.receipt_list, name='receipt_list'),
     path('receipts/new/', views.receipt_create, name='receipt_create'),
+    path('receipts/<int:pk>/edit/', views.receipt_edit, name='receipt_edit'),
     path('receipts/export/', views.receipt_export, name='receipt_export'),
     path('recipes/', views.recipe_list, name='recipe_list'),
     path('recipes/new/', views.recipe_create, name='recipe_create'),

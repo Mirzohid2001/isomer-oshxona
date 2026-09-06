@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize kitchen_tags %}
 {% block title %}Ombor — Oshxona{% endblock %}
 {% block page_title %}Ombor qoldig‘i{% endblock %}
 {% block page_subtitle %}Miqdor, tannarx va muddat nazorati{% endblock %}
@@ -23,7 +23,7 @@
         {% for p in products %}
         <tr>
           <td><strong>{{ p.name }}</strong><div class="cell-muted">{{ p.category.name }}</div></td>
-          <td>{{ p.quantity }} {{ p.unit }}</td>
+          <td>{{ p.quantity|smart_qty }} {{ p.unit }}</td>
           <td>{{ p.min_stock }}</td>
           <td>{{ p.avg_cost|floatformat:0|intcomma }}</td>
           <td>{{ p.stock_value|floatformat:0|intcomma }}</td>

@@ -12,7 +12,7 @@ from kitchen.models import MovementType, Product, StockMovement
 from kitchen.services import StockError, adjust_stock, receive_stock, record_waste
 from kitchen.services.export import spreadsheet_download
 from kitchen.services.precision import qty
-from kitchen.services.stock import allocation_rows_from_movement, preview_fefo_allocation
+from kitchen.services.stock import allocation_rows_from_movement, preview_fefo_allocation, update_receipt
 from kitchen.utils import filter_dt_range, paginate, parse_date
 
 
@@ -186,7 +186,57 @@ def receipt_create(request):
             return redirect('receipt_list')
         except StockError as exc:
             messages.error(request, str(exc))
-    return render(request, 'kitchen/receipts/form.html', {'form': form})
+    return render(
+        request,
+        'kitchen/receipts/form.html',
+        {'form': form, 'title': 'Yangi prixod', 'submit_label': 'Kiritish'},
+    )
+
+
+@login_required
+def receipt_edit(request, pk):
+    movement = get_object_or_404(
+        StockMovement.objects.select_related('product', 'supplier', 'location'),
+        pk=pk,
+        movement_type=MovementType.IN,
+        cook_batch__isnull=True,
+    )
+    initial = {
+        'product': movement.product_id,
+        'quantity': movement.quantity,
+        'unit_cost': movement.unit_cost,
+        'supplier': movement.supplier_id,
+        'expiry_date': movement.expiry_date,
+        'location': movement.location_id,
+        'note': movement.note,
+    }
+    form = ReceiptForm(request.POST or None, initial=initial, lock_product=True)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            update_receipt(
+                movement=movement,
+                quantity=form.cleaned_data['quantity'],
+                unit_cost=form.cleaned_data['unit_cost'],
+                supplier=form.cleaned_data['supplier'],
+                expiry_date=form.cleaned_data['expiry_date'],
+                location=form.cleaned_data.get('location'),
+                note=form.cleaned_data['note'],
+                user=request.user,
+            )
+            messages.success(request, 'Prixod yangilandi.')
+            return redirect('receipt_list')
+        except StockError as exc:
+            messages.error(request, str(exc))
+    return render(
+        request,
+        'kitchen/receipts/form.html',
+        {
+            'form': form,
+            'title': f'Tahrir: {movement.product.name}',
+            'submit_label': 'Saqlash',
+            'movement': movement,
+        },
+    )
 
 
 @login_required

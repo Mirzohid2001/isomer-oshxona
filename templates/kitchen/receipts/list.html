@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize kitchen_tags %}
 {% block title %}Prixodlar — Oshxona{% endblock %}
 {% block page_title %}Prixodlar{% endblock %}
 {% block page_subtitle %}Mahsulot kirimi va o‘rtacha tannarx{% endblock %}
@@ -36,21 +36,22 @@
   <div class="table-wrap">
     <table class="data">
       <thead>
-        <tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Jami</th><th>Yetkazuvchi</th><th>Muddat</th></tr>
+        <tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Jami</th><th>Yetkazuvchi</th><th>Muddat</th><th></th></tr>
       </thead>
       <tbody>
         {% for m in movements %}
         <tr>
           <td>{{ m.created_at|date:"d.m.Y H:i" }}</td>
           <td><strong>{{ m.product.name }}</strong></td>
-          <td>{{ m.quantity }} {{ m.product.unit }}</td>
+          <td>{{ m.quantity|smart_qty }} {{ m.product.unit }}</td>
           <td>{{ m.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.total_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.supplier|default:"—" }}</td>
           <td>{{ m.expiry_date|default:"—" }}</td>
+          <td><a class="btn btn-ghost btn-sm" href="{% url 'receipt_edit' m.pk %}">Tahrirlash</a></td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="empty">Prixod yo‘q</td></tr>
+        <tr><td colspan="8" class="empty">Prixod yo‘q</td></tr>
         {% endfor %}
       </tbody>
     </table>

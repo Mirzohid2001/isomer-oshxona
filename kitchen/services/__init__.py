@@ -14,6 +14,7 @@ from kitchen.services.stock import (
     receive_stock,
     record_waste,
     restore_stock,
+    update_receipt,
 )
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     'record_waste',
     'restore_stock',
     'consume_stock',
+    'update_receipt',
     'shopping_list_for_date',
     'shopping_list_for_menu',
     'shopping_list_for_range',

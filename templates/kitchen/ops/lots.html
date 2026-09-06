@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize kitchen_tags %}
 {% block title %}Partiyalar — Oshxona{% endblock %}
 {% block page_title %}Partiyalar (FEFO){% endblock %}
 {% block page_subtitle %}Muddat bo‘yicha sarflash tartibi{% endblock %}
@@ -14,7 +14,7 @@
         <tr>
           <td><strong>{{ lot.product.name }}</strong></td>
           <td>{{ lot.location|default:"—" }}</td>
-          <td>{{ lot.quantity }} {{ lot.product.unit }}</td>
+          <td>{{ lot.quantity|smart_qty }} {{ lot.product.unit }}</td>
           <td>{{ lot.unit_cost|floatformat:0|intcomma }}</td>
           <td>{% if lot.expiry_date %}{{ lot.expiry_date }}{% else %}—{% endif %}</td>
           <td>{{ lot.received_at|date:"d.m.Y" }}</td>

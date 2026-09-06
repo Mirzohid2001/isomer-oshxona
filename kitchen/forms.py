@@ -99,10 +99,23 @@ class ReceiptForm(StyledFormMixin, forms.Form):
     )
     note = forms.CharField(required=False, label='Izoh')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, lock_product=False, **kwargs):
         super().__init__(*args, **kwargs)
         from kitchen.models import StorageLocation
         self.fields['location'].queryset = StorageLocation.objects.filter(is_active=True)
+        self._lock_product = lock_product
+        if lock_product:
+            # Disabled maydon POST’da kelmaydi — readonly ko‘rinish
+            self.fields['product'].disabled = True
+            self.fields['product'].required = False
+
+    def clean_product(self):
+        if getattr(self, '_lock_product', False):
+            product_id = self.initial.get('product')
+            if product_id:
+                return Product.objects.get(pk=product_id)
+            return None
+        return self.cleaned_data.get('product')
 
 
 class AdjustStockForm(StyledFormMixin, forms.Form):

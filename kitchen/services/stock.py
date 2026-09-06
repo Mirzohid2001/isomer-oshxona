@@ -243,6 +243,84 @@ def receive_stock(
 
 
 @transaction.atomic
+def update_receipt(
+    *,
+    movement,
+    quantity,
+    unit_cost,
+    user=None,
+    supplier=None,
+    expiry_date=None,
+    note='',
+    location=None,
+):
+    """Mavjud prixodni tahrirlash — partiya va ombor qoldig‘ini sinxron yangilaydi."""
+    movement = StockMovement.objects.select_for_update().select_related('product').get(pk=movement.pk)
+    if movement.movement_type != MovementType.IN or movement.cook_batch_id:
+        raise StockError('Faqat oddiy prixod yozuvini tahrirlash mumkin.')
+
+    quantity = qty(quantity)
+    unit_cost = money(unit_cost)
+    if quantity <= 0:
+        raise StockError('Miqdor 0 dan katta bo‘lishi kerak.')
+    if unit_cost < 0:
+        raise StockError('Narx manfiy bo‘lmasligi kerak.')
+
+    product = Product.objects.select_for_update().get(pk=movement.product_id)
+    lot = (
+        StockLot.objects.select_for_update()
+        .filter(source_movement=movement)
+        .order_by('id')
+        .first()
+    )
+    if lot is None:
+        raise StockError('Bu prixodga bog‘langan partiya topilmadi — tahrirlab bo‘lmaydi.')
+
+    old_qty = qty(movement.quantity)
+    consumed = qty(old_qty - lot.quantity)
+    if consumed < 0:
+        consumed = qty(0)
+    if quantity < consumed:
+        raise StockError(
+            f'Bu partiyadan allaqachon {consumed} {product.unit} sarflangan. '
+            f'Miqdor kamida {consumed} bo‘lishi kerak.'
+        )
+
+    delta = qty(quantity - old_qty)
+    new_product_qty = qty(product.quantity + delta)
+    if new_product_qty < 0:
+        raise StockError('Tahrirdan keyin ombor qoldig‘i manfiy bo‘lib qoladi.')
+
+    loc = location if location is not None else lot.location
+    lot.quantity = qty(lot.quantity + delta)
+    lot.unit_cost = unit_cost
+    lot.expiry_date = expiry_date
+    lot.supplier = supplier
+    lot.note = note or ''
+    lot.location = loc
+    lot.save(update_fields=['quantity', 'unit_cost', 'expiry_date', 'supplier', 'note', 'location'])
+
+    movement.quantity = quantity
+    movement.unit_cost = unit_cost
+    movement.total_cost = money(quantity * unit_cost)
+    movement.supplier = supplier
+    movement.expiry_date = expiry_date
+    movement.note = note or ''
+    movement.location = loc
+    movement.save(
+        update_fields=['quantity', 'unit_cost', 'total_cost', 'supplier', 'expiry_date', 'note', 'location']
+    )
+
+    product.quantity = new_product_qty
+    product.save(update_fields=['quantity'])
+    _sync_product_avg_from_lots(product)
+    _sync_product_expiry(product)
+    _after_stock_change()
+    log_action(user, 'prixod_tahrir', 'stock_movement', movement.pk, f'{product.name}: {old_qty}→{quantity}')
+    return movement
+
+
+@transaction.atomic
 def consume_stock(
     *,
     product,

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize kitchen_tags %}
 {% block title %}Chiqindi — Oshxona{% endblock %}
 {% block page_title %}Chiqindi / buzilish{% endblock %}
 {% block page_subtitle %}Allohida rasxod turi{% endblock %}
@@ -17,7 +17,7 @@
         <tr>
           <td>{{ m.created_at|date:"d.m.Y H:i" }}</td>
           <td>{{ m.product.name }}</td>
-          <td>{{ m.quantity }} {{ m.product.unit }}</td>
+          <td>{{ m.quantity|smart_qty }} {{ m.product.unit }}</td>
           <td>{{ m.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.total_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.note }}</td>

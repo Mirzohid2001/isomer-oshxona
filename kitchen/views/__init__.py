@@ -73,6 +73,7 @@ from kitchen.views.reports import (
 from kitchen.views.stock_views import (
     movement_detail,
     receipt_create,
+    receipt_edit,
     receipt_export,
     receipt_list,
     stock_adjust,
@@ -105,6 +106,7 @@ __all__ = [
     'movement_detail',
     'receipt_list',
     'receipt_create',
+    'receipt_edit',
     'receipt_export',
     'waste_list',
     'waste_create',
