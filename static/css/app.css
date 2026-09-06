@@ -2069,6 +2069,23 @@ table.data tbody tr:last-child td {
   margin: 1.4rem 0 0.8rem;
 }
 
+.form-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1.1rem 0 0.65rem;
+  flex-wrap: wrap;
+}
+
+.form-section-head .form-section-title {
+  margin: 0;
+}
+
+.formset-hint {
+  margin: 0.65rem 0 0;
+}
+
 .field-help {
   margin-top: 0.3rem;
   font-size: 0.8rem;
