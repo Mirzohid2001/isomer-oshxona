@@ -754,6 +754,14 @@ class FormFeedbackTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'field-error')
 
+    def test_recipe_form_has_add_ingredient_control(self):
+        resp = self.client.get(reverse('recipe_create'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'add-ingredient-row')
+        self.assertContains(resp, 'Yana mahsulot')
+        self.assertContains(resp, 'id_items-TOTAL_FORMS')
+        self.assertContains(resp, 'ingredient-empty-form')
+
     def test_po_form_has_error_slots(self):
         resp = self.client.get(reverse('purchase_order_create'))
         self.assertEqual(resp.status_code, 200)

@@ -167,6 +167,9 @@ RecipeItemFormSet = inlineformset_factory(
     formset=BaseRecipeItemFormSet,
     extra=3,
     can_delete=True,
+    min_num=0,
+    validate_min=False,
+    max_num=50,
 )
 
 
