@@ -6,7 +6,7 @@
 {% block content %}
 <div class="toolbar">
   <div class="toolbar-actions">
-  <a class="btn btn-ghost" href="{% url 'recipe_edit' recipe.pk %}">Tahrirlash</a>
+  <a class="btn" href="{% url 'recipe_edit' recipe.pk %}">Tahrirlash</a>
   <a class="btn" href="{% url 'recipe_pdf' recipe.pk %}?portions={{ portions }}">PDF</a>
   <a class="btn btn-ghost" href="{% url 'recipe_print' recipe.pk %}?portions={{ portions }}">Chop etish</a>
   <a class="btn btn-accent" href="{% url 'cook_create' %}?recipe={{ recipe.pk }}&portions={{ portions }}">Pishirish</a>

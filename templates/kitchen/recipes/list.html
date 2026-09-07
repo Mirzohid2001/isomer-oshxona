@@ -13,20 +13,26 @@
 </div>
 <div class="recipe-cards">
   {% for card in cards %}
-  <a class="recipe-card" href="{% url 'recipe_detail' card.recipe.pk %}">
-    <div class="meta-row">
-      <span class="badge badge-mute">{{ card.recipe.get_meal_type_display }}</span>
-      {% if card.recipe.allergens %}<span class="badge badge-warn">{{ card.recipe.allergens }}</span>{% endif %}
+  <article class="recipe-card">
+    <a class="recipe-card-body" href="{% url 'recipe_detail' card.recipe.pk %}">
+      <div class="meta-row">
+        <span class="badge badge-mute">{{ card.recipe.get_meal_type_display }}</span>
+        {% if card.recipe.allergens %}<span class="badge badge-warn">{{ card.recipe.allergens }}</span>{% endif %}
+      </div>
+      <h3>{{ card.recipe.name }}</h3>
+      <div class="meta-row">
+        <div class="metric"><span>1 porsiya</span><strong>{{ card.info.cost_per_portion|floatformat:0|intcomma }}</strong></div>
+        <div class="metric"><span>Kkal</span><strong>{{ card.info.kcal_per_portion|floatformat:0 }}</strong></div>
+      </div>
+      <div class="cell-muted">
+        O {{ card.info.protein_per_portion|floatformat:1 }} · Y {{ card.info.fat_per_portion|floatformat:1 }} · U {{ card.info.carbs_per_portion|floatformat:1 }}
+      </div>
+    </a>
+    <div class="recipe-card-actions">
+      <a class="btn btn-ghost btn-sm" href="{% url 'recipe_edit' card.recipe.pk %}">Tahrirlash</a>
+      <a class="btn btn-ghost btn-sm" href="{% url 'recipe_detail' card.recipe.pk %}">Ko‘rish</a>
     </div>
-    <h3>{{ card.recipe.name }}</h3>
-    <div class="meta-row">
-      <div class="metric"><span>1 porsiya</span><strong>{{ card.info.cost_per_portion|floatformat:0|intcomma }}</strong></div>
-      <div class="metric"><span>Kkal</span><strong>{{ card.info.kcal_per_portion|floatformat:0 }}</strong></div>
-    </div>
-    <div class="cell-muted">
-      O {{ card.info.protein_per_portion|floatformat:1 }} · Y {{ card.info.fat_per_portion|floatformat:1 }} · U {{ card.info.carbs_per_portion|floatformat:1 }}
-    </div>
-  </a>
+  </article>
   {% empty %}
   <div class="panel"><div class="empty">Retsept yo‘q. Yangisini qo‘shing.</div></div>
   {% endfor %}

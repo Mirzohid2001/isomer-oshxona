@@ -127,5 +127,10 @@ def recipe_edit(request, pk):
     return render(
         request,
         'kitchen/recipes/form.html',
-        {'form': form, 'formset': formset, 'title': recipe.name, 'recipe': recipe},
+        {
+            'form': form,
+            'formset': formset,
+            'title': f'{recipe.name} — tahrirlash',
+            'recipe': recipe,
+        },
     )

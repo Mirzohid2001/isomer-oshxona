@@ -1127,6 +1127,23 @@ table.data tbody tr:last-child td {
   box-shadow: var(--shadow-lg);
 }
 
+.recipe-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+}
+
+.recipe-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--line-soft);
+}
+
 .recipe-card h3 {
   margin: 0;
   font-family: var(--font-display);

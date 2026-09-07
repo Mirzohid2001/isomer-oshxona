@@ -395,6 +395,64 @@ class RecipeCalcTests(TestCase):
         self.assertEqual(info20['items'][0]['need'], Decimal('4.000'))
 
 
+class RecipeEditViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user('recipe_edit', 're@t.t', 'x')
+        self.client = Client()
+        self.client.login(username='recipe_edit', password='x')
+        self.cat = Category.objects.create(name='EditCat')
+        self.product = Product.objects.create(name='EditRice', category=self.cat, unit=Unit.KG)
+        self.extra = Product.objects.create(name='EditOil', category=self.cat, unit=Unit.L)
+        self.recipe = Recipe.objects.create(name='EditOsh', base_portions=1, meal_type=MealType.LUNCH)
+        self.item = RecipeItem.objects.create(
+            recipe=self.recipe,
+            product=self.product,
+            quantity_per_portion=Decimal('0.100'),
+        )
+
+    def test_list_shows_edit_link(self):
+        resp = self.client.get(reverse('recipe_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, reverse('recipe_edit', args=[self.recipe.pk]))
+        self.assertContains(resp, 'Tahrirlash')
+
+    def test_edit_updates_name_and_ingredients(self):
+        url = reverse('recipe_edit', args=[self.recipe.pk])
+        resp = self.client.post(
+            url,
+            {
+                'name': 'Yangilangan osh',
+                'description': '',
+                'meal_type': MealType.LUNCH,
+                'base_portions': 2,
+                'allergens': '',
+                'is_active': 'on',
+                'items-TOTAL_FORMS': '4',
+                'items-INITIAL_FORMS': '1',
+                'items-MIN_NUM_FORMS': '0',
+                'items-MAX_NUM_FORMS': '50',
+                'items-0-id': str(self.item.pk),
+                'items-0-product': str(self.product.pk),
+                'items-0-quantity_per_portion': '0.150',
+                'items-1-product': str(self.extra.pk),
+                'items-1-quantity_per_portion': '0.020',
+                'items-2-product': '',
+                'items-2-quantity_per_portion': '',
+                'items-3-product': '',
+                'items-3-quantity_per_portion': '',
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.recipe.refresh_from_db()
+        self.assertEqual(self.recipe.name, 'Yangilangan osh')
+        self.assertEqual(self.recipe.base_portions, 2)
+        items = list(self.recipe.items.order_by('product__name'))
+        self.assertEqual(len(items), 2)
+        by_name = {i.product.name: i.quantity_per_portion for i in items}
+        self.assertEqual(by_name['EditOil'], Decimal('0.020'))
+        self.assertEqual(by_name['EditRice'], Decimal('0.150'))
+
+
 class ApprovalAndPoTests(TestCase):
     def setUp(self):
         User = get_user_model()
