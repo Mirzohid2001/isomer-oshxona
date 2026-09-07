@@ -196,11 +196,6 @@ class CookForm(StyledFormMixin, forms.Form):
         widget=forms.DateInput(attrs={'type': 'date'}),
         help_text='Eski kunlardagi pishirishni ham shu yerdan kiritish mumkin.',
     )
-    shift = forms.ChoiceField(
-        choices=[('', '—')] + list(DailyHeadcount._meta.get_field('shift').choices),
-        required=False,
-        label='Smena',
-    )
     note = forms.CharField(required=False, label='Izoh')
 
     def clean_cooked_on(self):
@@ -288,7 +283,7 @@ MenuTemplateItemFormSet = inlineformset_factory(
 class HeadcountForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = DailyHeadcount
-        fields = ['date', 'shift', 'people_count']
+        fields = ['date', 'people_count']
         widgets = {'date': forms.DateInput(attrs={'type': 'date'})}
 
 

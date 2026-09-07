@@ -3,7 +3,7 @@ from datetime import date, datetime, time
 from django.db import transaction
 from django.utils import timezone
 
-from kitchen.models import CookBatch, CookBatchItem, MovementType, Product
+from kitchen.models import CookBatch, CookBatchItem, MovementType, Product, Shift
 from kitchen.services.audit import log_action
 from kitchen.services.precision import money
 from kitchen.services.recipe_cost import recipe_nutrition
@@ -101,7 +101,7 @@ def cook_recipe(*, recipe, portions, user=None, note='', shift='', cooked_at=Non
     batch = CookBatch.objects.create(
         recipe=recipe,
         portions=portions,
-        shift=shift or '',
+        shift=shift or Shift.ONE,
         status=CookBatch.Status.DONE,
         total_cost=preview['total_cost'],
         cost_per_portion=preview['cost_per_portion'],
@@ -166,7 +166,7 @@ def queue_cook(*, recipe, portions, user=None, note='', shift='', cooked_at=None
     batch = CookBatch.objects.create(
         recipe=recipe,
         portions=portions,
-        shift=shift or '',
+        shift=shift or Shift.ONE,
         status=CookBatch.Status.QUEUED,
         total_cost=preview['total_cost'],
         cost_per_portion=preview['cost_per_portion'],

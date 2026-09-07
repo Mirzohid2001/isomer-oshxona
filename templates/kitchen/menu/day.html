@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Kunlik menyu — Oshxona{% endblock %}
 {% block page_title %}Kunlik menyu{% endblock %}
-{% block page_subtitle %}Sana: {{ day }} · {% if people %}Tavsiya porsiya: {{ people }}{% else %}Smena odam soni kiritilmagan{% endif %}{% endblock %}
+{% block page_subtitle %}Sana: {{ day }} · {% if people %}Tavsiya porsiya: {{ people }}{% else %}Odam soni kiritilmagan{% endif %}{% endblock %}
 {% block content %}
 <div class="toolbar">
   <form method="get" class="toolbar-form">
@@ -15,7 +15,7 @@
     <input type="hidden" name="date" value="{{ day }}">
     <button class="btn btn-accent" type="submit">Barcha porsiyani {{ people }} qilish</button>
   </form>
-  <a class="btn btn-ghost" href="{% url 'headcount_list' %}">Smena: {{ people }} odam</a>
+  <a class="btn btn-ghost" href="{% url 'headcount_list' %}">Odam: {{ people }}</a>
   {% else %}
   <a class="btn btn-accent" href="{% url 'headcount_list' %}">Odam sonini kiritish</a>
   {% endif %}

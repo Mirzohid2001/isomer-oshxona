@@ -43,7 +43,7 @@
       <a class="nav-link {% if 'menu' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'menu_day' %}" @click="navOpen = false">Kunlik menyu</a>
       <a class="nav-link {% if 'waste' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'waste_list' %}" @click="navOpen = false">Chiqindi</a>
       <div class="nav-label">Reja</div>
-      <a class="nav-link {% if 'headcount' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'headcount_list' %}" @click="navOpen = false">Smena / odam</a>
+      <a class="nav-link {% if 'headcount' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'headcount_list' %}" @click="navOpen = false">Odam soni</a>
       <a class="nav-link {% if 'shopping' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'shopping_list' %}" @click="navOpen = false">Xarid ro‘yxati</a>
       <a class="nav-link {% if 'purchase' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'purchase_order_list' %}" @click="navOpen = false">PO / buyurtma</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'lot_list' %}is-active{% endif %}" href="{% url 'lot_list' %}" @click="navOpen = false">Partiyalar</a>

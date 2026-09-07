@@ -2,7 +2,7 @@
 {% load humanize %}
 {% block title %}Pishirish — Oshxona{% endblock %}
 {% block page_title %}Pishirish{% endblock %}
-{% block page_subtitle %}{% if suggested %}Bugun tavsiya: {{ suggested }} porsiya (smena odamlari){% else %}Sana tanlab eski pishirishlarni ham kiritish mumkin · tasdiqlanganda ombor rasxod bo‘ladi{% endif %}{% endblock %}
+{% block page_subtitle %}{% if suggested %}Bugun tavsiya: {{ suggested }} porsiya (odam soni){% else %}Sana tanlab eski pishirishlarni ham kiritish mumkin · tasdiqlanganda ombor rasxod bo‘ladi{% endif %}{% endblock %}
 {% block content %}
 <div class="panel-grid">
   <div class="panel">
@@ -19,7 +19,7 @@
             <label>{{ form.portions.label }}</label>
             {{ form.portions }}
             {% if suggested %}
-            <button class="btn btn-ghost btn-sm btn-stack" type="button" onclick="document.getElementById('id_portions').value='{{ suggested }}'; document.getElementById('id_portions').dispatchEvent(new Event('change'))">Smenadan: {{ suggested }}</button>
+            <button class="btn btn-ghost btn-sm btn-stack" type="button" onclick="document.getElementById('id_portions').value='{{ suggested }}'; document.getElementById('id_portions').dispatchEvent(new Event('change'))">Odam sonidan: {{ suggested }}</button>
             {% endif %}
           </div>
           <div class="form-field">
@@ -27,10 +27,6 @@
             {{ form.cooked_on }}
             {% if form.cooked_on.help_text %}<p class="muted-note">{{ form.cooked_on.help_text }}</p>{% endif %}
             {% include "kitchen/partials/field_errors.html" with field=form.cooked_on %}
-          </div>
-          <div class="form-field">
-            <label>{{ form.shift.label }}</label>
-            {{ form.shift }}
           </div>
           <div class="form-field full">
             <label>{{ form.note.label }}</label>

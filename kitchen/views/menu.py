@@ -13,7 +13,7 @@ from kitchen.forms import (
     MenuTemplateForm,
     MenuTemplateItemFormSet,
 )
-from kitchen.models import DailyHeadcount, DailyMenu, DailyMenuItem, MenuTemplate
+from kitchen.models import DailyHeadcount, DailyMenu, DailyMenuItem, MenuTemplate, Shift
 from kitchen.services import StockError, cook_recipe, log_action, recipe_nutrition
 from kitchen.utils import local_today, parse_date
 from kitchen.views.common import suggested_portions
@@ -174,10 +174,10 @@ def headcount_list(request):
     if request.method == 'POST' and form.is_valid():
         obj, _ = DailyHeadcount.objects.update_or_create(
             date=form.cleaned_data['date'],
-            shift=form.cleaned_data['shift'],
+            shift=Shift.ONE,
             defaults={'people_count': form.cleaned_data['people_count']},
         )
-        messages.success(request, f'{obj} saqlandi.')
+        messages.success(request, f'{obj.date}: {obj.people_count} odam saqlandi.')
         return redirect('headcount_list')
-    rows = DailyHeadcount.objects.all()[:60]
+    rows = DailyHeadcount.objects.filter(shift=Shift.ONE)[:60]
     return render(request, 'kitchen/headcount/list.html', {'form': form, 'rows': rows})
