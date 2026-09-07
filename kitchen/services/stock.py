@@ -82,7 +82,11 @@ def _sync_product_avg_from_lots(product):
 
 
 def preview_fefo_allocation(product, quantity, location=None):
-    """Rasxod qilmasdan FEFO bo‘yicha qaysi partiyadan qancha ketishini ko‘rsatadi."""
+    """Rasxod qilmasdan FEFO bo‘yicha qaysi partiyadan qancha ketishini ko‘rsatadi.
+
+    location=None → barcha ombor joylaridagi partiyalar (retsept/pishirish uchun).
+    location berilsa → faqat shu joy.
+    """
     quantity = qty(quantity)
     if quantity <= 0:
         return {
@@ -94,12 +98,11 @@ def preview_fefo_allocation(product, quantity, location=None):
             'missing': qty(0),
         }
 
-    loc = location if location is not None else product.default_location
     remaining = quantity
     lines = []
     qs = StockLot.objects.filter(product=product, quantity__gt=0)
-    if loc is not None:
-        qs = qs.filter(location=loc)
+    if location is not None:
+        qs = qs.filter(location=location)
     qs = qs.order_by(F('expiry_date').asc(nulls_last=True), 'received_at', 'id')
 
     for lot in qs:
@@ -344,8 +347,9 @@ def consume_stock(
             f'{product.name}: yetarli emas (qoldiq {have} {product.unit}, kerak {quantity}).'
         )
 
-    movement_location = location or product.default_location
-    _assert_lot_cover(product, quantity, location=movement_location)
+    # Joy berilmasa — barcha partiyalardan (qoldiq ham umumiy). Joy berilsa — faqat shu joy.
+    _assert_lot_cover(product, quantity, location=location)
+    movement_location = location if location is not None else product.default_location
 
     movement = StockMovement.objects.create(
         movement_type=movement_type,
@@ -363,7 +367,7 @@ def consume_stock(
             product=product,
             quantity=quantity,
             movement=movement,
-            location=movement_location,
+            location=location,
         )
     except StockError:
         if not allow_negative:

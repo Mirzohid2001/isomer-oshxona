@@ -277,6 +277,46 @@ class FefoCostTests(TestCase):
         avg_based = money(Decimal('40') * self.product.avg_cost)
         self.assertNotEqual(info['total_cost'], avg_based)
 
+    def test_recipe_cost_uses_lots_outside_default_location(self):
+        """Prixod boshqa omborda bo‘lsa ham retsept tannarxi 0 bo‘lmasin."""
+        cold, _ = StorageLocation.objects.get_or_create(
+            code='COLD',
+            defaults={'name': 'Sovuqxona'},
+        )
+        dry, _ = StorageLocation.objects.get_or_create(
+            code='DRY',
+            defaults={'name': 'Quruq ombor'},
+        )
+        egg = Product.objects.create(
+            name='TuxumX',
+            category=self.cat,
+            unit=Unit.PCS,
+            default_location=dry,
+        )
+        receive_stock(
+            product=egg,
+            quantity=Decimal('100'),
+            unit_cost=Decimal('1400'),
+            user=self.user,
+            location=cold,
+        )
+        recipe = Recipe.objects.create(name='Tuxum test')
+        RecipeItem.objects.create(
+            recipe=recipe,
+            product=egg,
+            quantity_per_portion=Decimal('2'),
+        )
+        info = recipe_nutrition(recipe, 1)
+        self.assertEqual(info['items'][0]['line_cost'], Decimal('2800.00'))
+        self.assertEqual(info['total_cost'], Decimal('2800.00'))
+        self.assertTrue(info['can_cook'])
+        preview = preview_fefo_allocation(egg, Decimal('2'))
+        self.assertEqual(preview['missing'], Decimal('0.000'))
+        self.assertEqual(preview['total_cost'], Decimal('2800.00'))
+        scoped = preview_fefo_allocation(egg, Decimal('2'), location=dry)
+        self.assertEqual(scoped['missing'], Decimal('2.000'))
+        self.assertEqual(scoped['total_cost'], Decimal('0.00'))
+
     def test_consume_preview_api(self):
         resp = self.client.get(
             reverse('stock_consume_preview'),
