@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django.utils import timezone
 
 from kitchen.models import (
     Category,
@@ -189,12 +190,24 @@ RecipeItemFormSet = inlineformset_factory(
 class CookForm(StyledFormMixin, forms.Form):
     recipe = forms.ModelChoiceField(queryset=Recipe.objects.filter(is_active=True), label='Ovqat')
     portions = forms.IntegerField(min_value=1, initial=50, label='Porsiya')
+    cooked_on = forms.DateField(
+        label='Sana',
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text='Eski kunlardagi pishirishni ham shu yerdan kiritish mumkin.',
+    )
     shift = forms.ChoiceField(
         choices=[('', '—')] + list(DailyHeadcount._meta.get_field('shift').choices),
         required=False,
         label='Smena',
     )
     note = forms.CharField(required=False, label='Izoh')
+
+    def clean_cooked_on(self):
+        value = self.cleaned_data['cooked_on']
+        if value > timezone.localdate():
+            raise forms.ValidationError('Kelajak sanasini tanlab bo‘lmaydi.')
+        return value
 
 
 class HygieneCheckForm(StyledFormMixin, forms.ModelForm):

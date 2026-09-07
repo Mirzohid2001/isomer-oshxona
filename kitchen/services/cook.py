@@ -1,5 +1,6 @@
-from django.db import transaction
+from datetime import date, datetime, time
 
+from django.db import transaction
 from django.utils import timezone
 
 from kitchen.models import CookBatch, CookBatchItem, MovementType, Product
@@ -7,6 +8,22 @@ from kitchen.services.audit import log_action
 from kitchen.services.precision import money
 from kitchen.services.recipe_cost import recipe_nutrition
 from kitchen.services.stock import StockError, consume_stock, restore_stock
+
+
+def _resolve_cooked_at(cooked_at=None):
+    """Sana yoki datetime → aware cooked_at (sana bo‘lsa kun o‘rtasi)."""
+    if cooked_at is None:
+        return timezone.now()
+    if isinstance(cooked_at, datetime):
+        if timezone.is_naive(cooked_at):
+            return timezone.make_aware(cooked_at, timezone.get_current_timezone())
+        return cooked_at
+    if isinstance(cooked_at, date):
+        return timezone.make_aware(
+            datetime.combine(cooked_at, time(12, 0)),
+            timezone.get_current_timezone(),
+        )
+    raise StockError('Pishirish sanasi noto‘g‘ri.')
 
 
 def _prepare_cook(recipe, portions):
@@ -78,8 +95,9 @@ def _restore_batch_stock(batch, user):
 
 
 @transaction.atomic
-def cook_recipe(*, recipe, portions, user=None, note='', shift=''):
+def cook_recipe(*, recipe, portions, user=None, note='', shift='', cooked_at=None):
     recipe, portions, locked, preview = _prepare_cook(recipe, portions)
+    stamped = _resolve_cooked_at(cooked_at)
     batch = CookBatch.objects.create(
         recipe=recipe,
         portions=portions,
@@ -94,6 +112,7 @@ def cook_recipe(*, recipe, portions, user=None, note='', shift=''):
         carbs_per_portion=preview['carbs_per_portion'],
         note=note,
         created_by=user,
+        cooked_at=stamped,
     )
     _consume_preview_into_batch(
         batch=batch,
@@ -140,9 +159,10 @@ def set_cook_status(*, batch, status, user=None):
 
 
 @transaction.atomic
-def queue_cook(*, recipe, portions, user=None, note='', shift=''):
+def queue_cook(*, recipe, portions, user=None, note='', shift='', cooked_at=None):
     """KDS: navbatga qo‘yish — omborni darhol rezerv qiladi (FEFO rasxod)."""
     recipe, portions, locked, preview = _prepare_cook(recipe, portions)
+    stamped = _resolve_cooked_at(cooked_at)
     batch = CookBatch.objects.create(
         recipe=recipe,
         portions=portions,
@@ -157,6 +177,7 @@ def queue_cook(*, recipe, portions, user=None, note='', shift=''):
         carbs_per_portion=preview['carbs_per_portion'],
         note=note,
         created_by=user,
+        cooked_at=stamped,
     )
     _consume_preview_into_batch(
         batch=batch,

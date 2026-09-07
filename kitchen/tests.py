@@ -422,6 +422,16 @@ class RecipeCalcTests(TestCase):
         self.assertEqual(self.rice.quantity, rice_before)
         self.assertEqual(self.meat.quantity, meat_before)
 
+    def test_cook_accepts_backdated_day(self):
+        past = timezone.localdate() - timedelta(days=12)
+        batch = cook_recipe(
+            recipe=self.recipe,
+            portions=1,
+            user=self.user,
+            cooked_at=past,
+        )
+        self.assertEqual(timezone.localdate(batch.cooked_at), past)
+
     def test_base_portions_scales_real_recipe_batch(self):
         recipe = Recipe.objects.create(name='Base10', base_portions=10)
         RecipeItem.objects.create(

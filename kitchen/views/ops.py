@@ -116,6 +116,7 @@ def kds_queue(request):
                 user=request.user,
                 note=form.cleaned_data.get('note') or '',
                 shift=form.cleaned_data.get('shift') or '',
+                cooked_at=form.cleaned_data.get('cooked_on'),
             )
             messages.success(request, f'Navbatga qo‘yildi va ombor rezerv qilindi: {batch.recipe.name}')
         except StockError as exc:

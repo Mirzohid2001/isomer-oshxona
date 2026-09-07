@@ -29,6 +29,7 @@ def cook_create(request):
                     user=request.user,
                     note=form.cleaned_data['note'],
                     shift=form.cleaned_data.get('shift') or '',
+                    cooked_at=form.cleaned_data.get('cooked_on'),
                 )
                 messages.success(
                     request,
