@@ -136,11 +136,11 @@ textarea {
   flex-shrink: 0;
   width: 56px;
   height: 56px;
-  border-radius: 14px;
-  object-fit: cover;
-  background: #0a0a0a;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .brand-text {
@@ -1271,11 +1271,11 @@ table.data tbody tr:last-child td {
   width: 112px;
   height: 112px;
   margin: 0 auto;
-  border-radius: 22px;
-  object-fit: cover;
-  background: #0a0a0a;
-  border: 1px solid rgba(18, 32, 26, 0.12);
-  box-shadow: 0 14px 32px rgba(18, 32, 26, 0.16);
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .login-card h1 {
