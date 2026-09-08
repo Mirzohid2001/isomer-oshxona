@@ -631,3 +631,72 @@ class HygieneCheck(models.Model):
 
     class Meta:
         ordering = ['-checked_at']
+
+
+class Worker(models.Model):
+    """Ovqatlanadigan ishchi (QR check-in uchun)."""
+
+    first_name = models.CharField('Ism', max_length=120)
+    last_name = models.CharField('Familiya', max_length=120)
+    employee_code = models.CharField('Tabel / kod', max_length=40, blank=True)
+    department = models.CharField('Bo‘lim', max_length=120, blank=True)
+    is_active = models.BooleanField('Faol', default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['last_name', 'first_name']
+        verbose_name = 'Ishchi'
+        verbose_name_plural = 'Ishchilar'
+        indexes = [
+            models.Index(fields=['last_name', 'first_name'], name='kit_worker_name'),
+            models.Index(fields=['is_active', 'last_name'], name='kit_worker_active'),
+        ]
+
+    def __str__(self):
+        return self.full_name
+
+    @property
+    def full_name(self):
+        return f'{self.last_name} {self.first_name}'.strip()
+
+
+class MealCheckin(models.Model):
+    """QR orqali ovqatlanish yozuvi — bir ishchi, bir kun, bir mahal = 1 marta."""
+
+    MEAL_CHOICES = (
+        (MealType.BREAKFAST, 'Nonushta'),
+        (MealType.LUNCH, 'Tushlik'),
+        (MealType.DINNER, 'Ujin'),
+    )
+
+    worker = models.ForeignKey(Worker, on_delete=models.PROTECT, related_name='meal_checkins')
+    meal_type = models.CharField(max_length=20, choices=MEAL_CHOICES)
+    served_on = models.DateField('Sana', db_index=True)
+    served_at = models.DateTimeField('Vaqt', default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+    note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-served_at']
+        verbose_name = 'Ovqatlanish'
+        verbose_name_plural = 'Ovqatlanishlar'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['worker', 'served_on', 'meal_type'],
+                name='kit_meal_checkin_unique_day',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['served_on', 'meal_type'], name='kit_meal_day_type'),
+            models.Index(fields=['meal_type', '-served_at'], name='kit_meal_type_time'),
+        ]
+
+    def __str__(self):
+        return f'{self.worker} · {self.served_on} · {self.get_meal_type_display()}'
+
+    def save(self, *args, **kwargs):
+        if self.served_at and not self.served_on:
+            self.served_on = timezone.localtime(self.served_at).date()
+        elif not self.served_on:
+            self.served_on = timezone.localdate()
+        super().save(*args, **kwargs)

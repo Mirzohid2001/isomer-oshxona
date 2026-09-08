@@ -27,6 +27,8 @@ from kitchen.models import (
     StorageLocation,
     Supplier,
     Unit,
+    Worker,
+    MealCheckin,
 )
 from kitchen.services.analytics import build_analytics
 from kitchen.services.approvals import (
@@ -36,6 +38,7 @@ from kitchen.services.approvals import (
     submit_waste_request,
 )
 from kitchen.services.cook import cancel_cook_batch, cook_recipe, queue_cook, start_queued_cook
+from kitchen.services.meals import build_meal_report, record_meal_checkin, search_workers
 from kitchen.services.nutrition_lookup import lookup_local, suggest_nutrition
 from kitchen.services.precision import money, qty, weighted_avg
 from kitchen.services.recipe_cost import recipe_nutrition
@@ -978,3 +981,75 @@ class ReceiptEditAndQtyFormatTests(TestCase):
         self.assertEqual(movement.quantity, Decimal('7.000'))
         self.assertEqual(movement.note, 'tuzatildi')
 
+
+
+class MealCheckinTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user('mealadmin', 'm@t.t', 'x', is_staff=True)
+        self.client = Client()
+        self.worker = Worker.objects.create(first_name='Ali', last_name='Karimov', department='Sex-1')
+        self.cat = Category.objects.create(name='MealCat')
+        self.product = Product.objects.create(name='NonM', category=self.cat, unit=Unit.PCS)
+        receive_stock(product=self.product, quantity=Decimal('100'), unit_cost=Decimal('1000'), user=self.user)
+        self.recipe = Recipe.objects.create(name='TushlikOsh', meal_type=MealType.LUNCH)
+        RecipeItem.objects.create(
+            recipe=self.recipe,
+            product=self.product,
+            quantity_per_portion=Decimal('1'),
+        )
+
+    def test_public_checkin_and_duplicate_blocked(self):
+        resp = self.client.get(reverse('meal_checkin'))
+        self.assertEqual(resp.status_code, 200)
+        search = self.client.get(reverse('meal_checkin_search'), {'q': 'Karimov'})
+        self.assertContains(search, 'Karimov Ali')
+        ok = self.client.post(
+            reverse('meal_checkin_submit'),
+            {'worker_id': self.worker.pk, 'meal_type': MealType.LUNCH},
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertContains(ok, 'Tasdiqlandi')
+        self.assertEqual(MealCheckin.objects.count(), 1)
+        dup = self.client.post(
+            reverse('meal_checkin_submit'),
+            {'worker_id': self.worker.pk, 'meal_type': MealType.LUNCH},
+        )
+        self.assertEqual(dup.status_code, 400)
+        self.assertEqual(MealCheckin.objects.count(), 1)
+
+    def test_report_sverka_cooked_vs_eaten(self):
+        cook_recipe(recipe=self.recipe, portions=10, user=self.user)
+        record_meal_checkin(worker=self.worker, meal_type=MealType.LUNCH)
+        w2 = Worker.objects.create(first_name='Vali', last_name='Sobirov')
+        record_meal_checkin(worker=w2, meal_type=MealType.LUNCH)
+        today = timezone.localdate()
+        report = build_meal_report(today.year, today.month)
+        self.assertEqual(report['totals']['eaten'], 2)
+        self.assertEqual(report['totals']['cooked'], 10)
+        self.assertEqual(report['totals']['diff'], 8)
+        self.assertEqual(report['totals']['by_meal'][MealType.LUNCH]['eaten'], 2)
+        self.assertEqual(report['unique_workers'], 2)
+
+    def test_excel_export_and_staff_pages(self):
+        self.client.login(username='mealadmin', password='x')
+        record_meal_checkin(worker=self.worker, meal_type=MealType.BREAKFAST)
+        today = timezone.localdate()
+        report_page = self.client.get(reverse('meal_report'), {'year': today.year, 'month': today.month})
+        self.assertEqual(report_page.status_code, 200)
+        self.assertContains(report_page, 'Excel export')
+        export = self.client.get(
+            reverse('meal_report_export'),
+            {'year': today.year, 'month': today.month},
+        )
+        self.assertEqual(export.status_code, 200)
+        self.assertIn('spreadsheetml.sheet', export['Content-Type'])
+        workers = self.client.get(reverse('worker_list'))
+        self.assertContains(workers, 'Karimov')
+        qr = self.client.get(reverse('meal_qr_poster'))
+        self.assertEqual(qr.status_code, 200)
+        self.assertContains(qr, 'ovqat')
+
+    def test_search_workers_multi_token(self):
+        found = list(search_workers('Karimov Ali'))
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].pk, self.worker.pk)

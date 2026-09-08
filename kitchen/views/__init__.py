@@ -70,6 +70,17 @@ from kitchen.views.reports import (
     reports_pdf_view,
     reports_print,
 )
+from kitchen.views.meals import (
+    meal_checkin,
+    meal_checkin_search,
+    meal_checkin_submit,
+    meal_qr_poster,
+    meal_report,
+    meal_report_export,
+    worker_create,
+    worker_edit,
+    worker_list,
+)
 from kitchen.views.stock_views import (
     movement_detail,
     receipt_create,
@@ -154,4 +165,13 @@ __all__ = [
     'reports_pdf_view',
     'notification_dismiss',
     'notification_dismiss_all',
+    'meal_checkin',
+    'meal_checkin_search',
+    'meal_checkin_submit',
+    'worker_list',
+    'worker_create',
+    'worker_edit',
+    'meal_qr_poster',
+    'meal_report',
+    'meal_report_export',
 ]

@@ -9,6 +9,7 @@ from kitchen.models import (
     DailyMenu,
     DailyMenuItem,
     HygieneCheck,
+    MealCheckin,
     MenuTemplate,
     MenuTemplateItem,
     MonthlyBudget,
@@ -22,6 +23,7 @@ from kitchen.models import (
     StockMovement,
     StorageLocation,
     Supplier,
+    Worker,
 )
 
 
@@ -139,3 +141,18 @@ class MonthlyBudgetAdmin(admin.ModelAdmin):
 class AuditLogAdmin(admin.ModelAdmin):
     list_display = ['created_at', 'user', 'action', 'entity', 'entity_id']
     readonly_fields = ['user', 'action', 'entity', 'entity_id', 'detail', 'created_at']
+
+
+@admin.register(Worker)
+class WorkerAdmin(admin.ModelAdmin):
+    list_display = ['last_name', 'first_name', 'department', 'employee_code', 'is_active']
+    list_filter = ['is_active', 'department']
+    search_fields = ['last_name', 'first_name', 'employee_code']
+
+
+@admin.register(MealCheckin)
+class MealCheckinAdmin(admin.ModelAdmin):
+    list_display = ['served_on', 'served_at', 'worker', 'meal_type']
+    list_filter = ['meal_type', 'served_on']
+    search_fields = ['worker__last_name', 'worker__first_name']
+    date_hierarchy = 'served_on'

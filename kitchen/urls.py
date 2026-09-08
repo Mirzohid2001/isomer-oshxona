@@ -72,4 +72,13 @@ urlpatterns = [
     path('reports/export-cooks/', views.reports_export_cooks, name='reports_export_cooks'),
     path('reports/print/', views.reports_print, name='reports_print'),
     path('reports/pdf/', views.reports_pdf_view, name='reports_pdf'),
+    path('ovqat/', views.meal_checkin, name='meal_checkin'),
+    path('ovqat/search/', views.meal_checkin_search, name='meal_checkin_search'),
+    path('ovqat/submit/', views.meal_checkin_submit, name='meal_checkin_submit'),
+    path('workers/', views.worker_list, name='worker_list'),
+    path('workers/new/', views.worker_create, name='worker_create'),
+    path('workers/<int:pk>/edit/', views.worker_edit, name='worker_edit'),
+    path('workers/qr/', views.meal_qr_poster, name='meal_qr_poster'),
+    path('meals/report/', views.meal_report, name='meal_report'),
+    path('meals/report/export/', views.meal_report_export, name='meal_report_export'),
 ]

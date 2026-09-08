@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ovqatlanish — Isomer Oil</title>
+  <link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+</head>
+<body class="checkin-body">
+  <main class="checkin-shell">
+    <header class="checkin-brand">
+      <img src="{% static 'img/isomer-logo.png' %}" alt="Isomer Oil" width="72" height="72">
+      <div>
+        <p class="checkin-eyebrow">Isomer Oil · Oshxona</p>
+        <h1>Ovqatlanish</h1>
+        <p class="checkin-sub">{{ today|date:"d.m.Y" }} · o‘zingizni toping va mahalni tanlang</p>
+      </div>
+    </header>
+
+    <section class="checkin-card">
+      <form id="checkin-form" method="post" action="{% url 'meal_checkin_submit' %}">
+        {% csrf_token %}
+        <input type="hidden" name="worker_id" id="worker_id" value="">
+
+        <div class="form-field">
+          <label for="worker-search">Ism / familiya</label>
+          <input
+            class="form-input"
+            id="worker-search"
+            type="search"
+            name="q"
+            placeholder="Masalan: Karimov"
+            autocomplete="off"
+            autofocus
+            hx-get="{% url 'meal_checkin_search' %}"
+            hx-trigger="keyup changed delay:200ms, search"
+            hx-target="#worker-results"
+            hx-include="this"
+          >
+        </div>
+
+        <div id="worker-results" class="checkin-results">
+          <div class="empty">Qidiruvni boshlang</div>
+        </div>
+
+        <div class="form-field checkin-meal-field">
+          <label>Qaysi ovqat?</label>
+          <div class="checkin-meals" role="radiogroup" aria-label="Ovqat turi">
+            {% for value, label in meal_choices %}
+            <label class="checkin-meal {% if value == suggested_meal %}is-suggested{% endif %}">
+              <input type="radio" name="meal_type" value="{{ value }}" {% if value == suggested_meal %}checked{% endif %} required>
+              <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button class="btn btn-accent checkin-submit" type="submit" id="checkin-submit" disabled>
+          Yuborish
+        </button>
+      </form>
+    </section>
+  </main>
+  <script>
+  (function () {
+    const form = document.getElementById('checkin-form');
+    const workerId = document.getElementById('worker_id');
+    const submitBtn = document.getElementById('checkin-submit');
+    const results = document.getElementById('worker-results');
+
+    function syncSubmit() {
+      submitBtn.disabled = !workerId.value;
+    }
+
+    results.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-worker-id]');
+      if (!btn) return;
+      workerId.value = btn.getAttribute('data-worker-id');
+      results.querySelectorAll('.checkin-worker').forEach(function (el) {
+        el.classList.toggle('is-selected', el === btn);
+      });
+      syncSubmit();
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function (e) {
+      if (e.target.id === 'worker-results') {
+        workerId.value = '';
+        syncSubmit();
+      }
+    });
+
+    form.addEventListener('submit', function (e) {
+      if (!workerId.value) {
+        e.preventDefault();
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Yuborilmoqda…';
+    });
+  })();
+  </script>
+</body>
+</html>

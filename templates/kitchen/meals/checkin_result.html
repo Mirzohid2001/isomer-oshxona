@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% if ok %}Tasdiqlandi{% else %}Xato{% endif %} — Ovqatlanish</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="checkin-body">
+  <main class="checkin-shell">
+    <section class="checkin-card checkin-result {% if ok %}is-ok{% else %}is-error{% endif %}">
+      {% if ok %}
+      <p class="checkin-eyebrow">Tasdiqlandi</p>
+      <h1>{{ worker.full_name }}</h1>
+      <p class="checkin-sub">{{ meal_label }} · {{ checkin.served_on|date:"d.m.Y" }} · {{ checkin.served_at|time:"H:i" }}</p>
+      <p class="muted-note">Yozuv tizimga tushdi. Rahmat!</p>
+      {% else %}
+      <p class="checkin-eyebrow">Yuborilmadi</p>
+      <h1>{{ worker.full_name }}</h1>
+      <p class="checkin-sub">{{ error }}</p>
+      {% endif %}
+      <a class="btn {% if ok %}btn-accent{% else %}{% endif %}" href="{% url 'meal_checkin' %}">Yana belgilash</a>
+    </section>
+  </main>
+  <meta http-equiv="refresh" content="8;url={% url 'meal_checkin' %}">
+</body>
+</html>

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}QR kod — Ovqatlanish{% endblock %}
+{% block page_title %}QR kod{% endblock %}
+{% block page_subtitle %}Ishchilar skaner qiladi — ochiq sahifa{% endblock %}
+{% block content %}
+<div class="toolbar no-print">
+  <div class="toolbar-actions">
+    <button class="btn" type="button" onclick="window.print()">Chop etish</button>
+    <a class="btn btn-ghost" href="{% url 'meal_checkin' %}" target="_blank" rel="noopener">Sahifani ochish</a>
+    <a class="btn btn-ghost" href="{% url 'worker_list' %}">Ishchilar</a>
+  </div>
+</div>
+<div class="panel qr-poster">
+  <div class="panel-body qr-poster-body">
+    <img class="qr-poster-logo" src="{% static 'img/isomer-logo.png' %}" alt="Isomer Oil" width="88" height="88">
+    <h2>Isomer Oil · Ovqatlanish</h2>
+    <p class="muted-note">QR kodni skaner qiling → ismni toping → mahalni tanlang → Yuborish</p>
+    <img class="qr-poster-img" src="{{ qr_image_url }}" alt="Ovqatlanish QR" width="360" height="360">
+    <p class="qr-poster-url">{{ checkin_url }}</p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% if workers %}
+<div class="checkin-worker-list">
+  {% for w in workers %}
+  <button class="checkin-worker" type="button" data-worker-id="{{ w.pk }}">
+    <strong>{{ w.full_name }}</strong>
+    <span>
+      {% if w.department %}{{ w.department }}{% endif %}
+      {% if w.employee_code %} · {{ w.employee_code }}{% endif %}
+    </span>
+  </button>
+  {% endfor %}
+</div>
+{% elif q %}
+<div class="empty">“{{ q }}” bo‘yicha ishchi topilmadi</div>
+{% else %}
+<div class="empty">Qidiruvni boshlang</div>
+{% endif %}

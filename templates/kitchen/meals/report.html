@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Ovqat otchoti — Oshxona{% endblock %}
+{% block page_title %}Ovqatlanish otchoti{% endblock %}
+{% block page_subtitle %}{{ selected_month|stringformat:"02d" }}.{{ selected_year }} · pishirilgan porsiya ↔ QR yeyilgan{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <form method="get" class="toolbar-form">
+    <div class="form-field">
+      <label>Yil</label>
+      <select class="form-select" name="year">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Oy</label>
+      <select class="form-select" name="month">
+        {% for m in months %}
+        <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-ghost" type="submit">Ko‘rsatish</button>
+  </form>
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'meal_report_export' %}?year={{ selected_year }}&month={{ selected_month }}">Excel export</a>
+    <a class="btn btn-ghost" href="{% url 'meal_qr_poster' %}">QR kod</a>
+    <a class="btn btn-ghost" href="{% url 'worker_list' %}">Ishchilar</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <div class="stat-label">QR yozuvlar</div>
+    <div class="stat-value">{{ report.checkin_count|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Ishchilar</div>
+    <div class="stat-value">{{ report.unique_workers|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Pishirilgan</div>
+    <div class="stat-value">{{ report.totals.cooked|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Yeyilgan</div>
+    <div class="stat-value">{{ report.totals.eaten|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Farq (pish − yey)</div>
+    <div class="stat-value">{{ report.totals.diff|intcomma }}</div>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head"><h3>Mahal bo‘yicha jami</h3></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Mahal</th><th>Pishirilgan</th><th>Yeyilgan</th><th>Farq</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Nonushta</strong></td>
+          <td>{{ report.totals.by_meal.breakfast.cooked|intcomma }}</td>
+          <td>{{ report.totals.by_meal.breakfast.eaten|intcomma }}</td>
+          <td>{{ report.totals.by_meal.breakfast.diff|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Tushlik</strong></td>
+          <td>{{ report.totals.by_meal.lunch.cooked|intcomma }}</td>
+          <td>{{ report.totals.by_meal.lunch.eaten|intcomma }}</td>
+          <td>{{ report.totals.by_meal.lunch.diff|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Ujin</strong></td>
+          <td>{{ report.totals.by_meal.dinner.cooked|intcomma }}</td>
+          <td>{{ report.totals.by_meal.dinner.eaten|intcomma }}</td>
+          <td>{{ report.totals.by_meal.dinner.diff|intcomma }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head">
+    <h3>Kunlik sverka</h3>
+    <span class="muted-note">Faqat pishirish yoki QR bo‘lgan kunlar</span>
+  </div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Sana</th><th>Mahal</th><th>Pishirilgan</th><th>Yeyilgan</th><th>Farq</th><th>Izoh</th></tr>
+      </thead>
+      <tbody>
+        {% for row in report.daily_rows %}
+        <tr>
+          <td>{{ row.date|date:"d.m.Y" }}</td>
+          <td>{{ row.meal_label }}</td>
+          <td>{{ row.cooked|intcomma }}</td>
+          <td>{{ row.eaten|intcomma }}</td>
+          <td>{% if row.diff < 0 %}<span class="badge badge-warn">{{ row.diff }}</span>{% else %}{{ row.diff }}{% endif %}</td>
+          <td class="cell-muted">{% if row.diff > 0 %}Ortib pishirilgan{% elif row.diff < 0 %}Pishirishdan ko‘p yeyilgan{% else %}Mos{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty">Bu oyda ma’lumot yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head"><h3>Ishchi bo‘yicha</h3></div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Ishchi</th><th>Bo‘lim</th><th>Nonushta</th><th>Tushlik</th><th>Ujin</th><th>Jami</th><th>Kunlar</th></tr>
+      </thead>
+      <tbody>
+        {% for row in report.worker_rows %}
+        <tr>
+          <td><strong>{{ row.full_name }}</strong></td>
+          <td>{{ row.department|default:"—" }}</td>
+          <td>{{ row.breakfast }}</td>
+          <td>{{ row.lunch }}</td>
+          <td>{{ row.dinner }}</td>
+          <td><strong>{{ row.total }}</strong></td>
+          <td>{{ row.days_count }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">QR yozuv yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head">
+    <h3>Batafsil jurnal</h3>
+    <span class="muted-note">Oxirgi 200 yozuv</span>
+  </div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Sana</th><th>Vaqt</th><th>Mahal</th><th>Ishchi</th><th>Bo‘lim</th></tr></thead>
+      <tbody>
+        {% for row in report.journal|slice:":200" %}
+        <tr>
+          <td>{{ row.served_on|date:"d.m.Y" }}</td>
+          <td>{{ row.served_at|time:"H:i" }}</td>
+          <td>{{ row.meal_label }}</td>
+          <td>{{ row.worker }}</td>
+          <td>{{ row.department|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty">Jurnal bo‘sh</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

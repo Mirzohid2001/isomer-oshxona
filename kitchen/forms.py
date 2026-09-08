@@ -17,6 +17,7 @@ from kitchen.models import (
     Recipe,
     RecipeItem,
     Supplier,
+    Worker,
 )
 
 
@@ -285,6 +286,12 @@ class HeadcountForm(StyledFormMixin, forms.ModelForm):
         model = DailyHeadcount
         fields = ['date', 'people_count']
         widgets = {'date': forms.DateInput(attrs={'type': 'date'})}
+
+
+class WorkerForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = Worker
+        fields = ['last_name', 'first_name', 'employee_code', 'department', 'is_active']
 
 
 class BudgetForm(StyledFormMixin, forms.ModelForm):
