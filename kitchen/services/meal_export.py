@@ -124,7 +124,8 @@ def meal_report_excel(report):
         'Kod',
         'Nonushta',
         'Tushlik',
-        'Ujin',
+        'Kunduzgi',
+        'Kechki ovqat',
         'Jami',
         'Kunlar',
     ]
@@ -140,6 +141,7 @@ def meal_report_excel(report):
             row['employee_code'] or '—',
             row['breakfast'],
             row['lunch'],
+            row['afternoon'],
             row['dinner'],
             row['total'],
             row['days_count'],
@@ -155,6 +157,7 @@ def meal_report_excel(report):
         [
             '',
             f'Jami ishchi: {report["unique_workers"]}',
+            '',
             '',
             '',
             '',

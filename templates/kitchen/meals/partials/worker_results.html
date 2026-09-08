@@ -2,16 +2,20 @@
 <div class="checkin-worker-list">
   {% for w in workers %}
   <button class="checkin-worker" type="button" data-worker-id="{{ w.pk }}">
-    <strong>{{ w.full_name }}</strong>
-    <span>
-      {% if w.department %}{{ w.department }}{% endif %}
-      {% if w.employee_code %} · {{ w.employee_code }}{% endif %}
+    <span class="checkin-worker-avatar">{{ w.last_name|slice:":1" }}{{ w.first_name|slice:":1" }}</span>
+    <span class="checkin-worker-meta">
+      <strong>{{ w.full_name }}</strong>
+      <span>
+        {% if w.department %}{{ w.department }}{% endif %}
+        {% if w.employee_code %}{% if w.department %} · {% endif %}{{ w.employee_code }}{% endif %}
+        {% if not w.department and not w.employee_code %}Tanlash{% endif %}
+      </span>
     </span>
   </button>
   {% endfor %}
 </div>
 {% elif q %}
-<div class="empty">“{{ q }}” bo‘yicha ishchi topilmadi</div>
+<div class="checkin-hint checkin-hint-warn">“{{ q }}” bo‘yicha ishchi topilmadi</div>
 {% else %}
-<div class="empty">Qidiruvni boshlang</div>
+<div class="checkin-hint">Ismingizni yozing — ro‘yxatdan tanlang</div>
 {% endif %}

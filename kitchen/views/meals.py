@@ -14,6 +14,7 @@ from kitchen.forms import WorkerForm
 from kitchen.models import MealCheckin, Worker
 from kitchen.services.meal_export import meal_report_excel
 from kitchen.services.meals import (
+    MEAL_HINTS,
     MEAL_LABELS,
     MEAL_ORDER,
     build_meal_report,
@@ -39,7 +40,14 @@ def meal_checkin(request):
         request,
         'kitchen/meals/checkin.html',
         {
-            'meal_choices': MealCheckin.MEAL_CHOICES,
+            'meal_choices': [
+                {
+                    'value': value,
+                    'label': label,
+                    'hint': MEAL_HINTS.get(value, ''),
+                }
+                for value, label in MealCheckin.MEAL_CHOICES
+            ],
             'suggested_meal': suggest_meal_type(),
             'today': timezone.localdate(),
         },

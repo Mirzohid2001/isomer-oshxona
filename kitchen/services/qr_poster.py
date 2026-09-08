@@ -97,7 +97,7 @@ def door_poster_png_bytes(data, logo_path=None):
     y = qy + qr_size + pad + 36
 
     y = center_text('1) Ismni toping', tip_font, y, '#12201A')
-    y = center_text('2) Nonushta / Tushlik / Ujin', tip_font, y, '#12201A')
+    y = center_text('2) Mahalni tanlang', tip_font, y, '#12201A')
     y = center_text('3) Yuborish', tip_font, y, '#12201A')
     center_text(data, url_font, y + 18, '#5A6F63')
 

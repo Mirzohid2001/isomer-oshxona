@@ -2273,119 +2273,211 @@ table.data tbody tr:last-child td {
 
 /* --- QR ovqatlanish (public) --- */
 .checkin-body {
+  position: relative;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(36, 117, 90, 0.22), transparent 55%),
-    linear-gradient(165deg, #0f3228 0%, #1a5542 42%, #143c31 100%);
+    radial-gradient(ellipse 90% 55% at 10% -5%, rgba(181, 106, 40, 0.18), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 90% 0%, rgba(36, 117, 90, 0.35), transparent 55%),
+    linear-gradient(165deg, #0c2a22 0%, #1a5542 45%, #12382e 100%);
   color: #f4f8f5;
   font-family: var(--font-body);
 }
 
+.checkin-glow {
+  position: absolute;
+  inset: auto 10% 8% 10%;
+  height: 40%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08), transparent 70%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
 .checkin-shell {
-  width: min(520px, calc(100% - 1.5rem));
+  position: relative;
+  z-index: 1;
+  width: min(560px, calc(100% - 1.25rem));
   margin: 0 auto;
-  padding: 1.5rem 0 2.5rem;
+  padding: 1.35rem 0 2.75rem;
 }
 
 .checkin-brand {
   display: flex;
   gap: 1rem;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.15rem;
 }
 
 .checkin-brand img {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
   background: transparent;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.25));
 }
 
 .checkin-brand h1 {
-  margin: 0.1rem 0;
+  margin: 0.12rem 0;
   font-family: var(--font-display);
-  font-size: clamp(1.7rem, 5vw, 2.2rem);
-  letter-spacing: -0.03em;
+  font-size: clamp(1.85rem, 6vw, 2.35rem);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
 }
 
 .checkin-eyebrow {
   margin: 0;
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(244, 248, 245, 0.7);
+  color: rgba(244, 248, 245, 0.68);
 }
 
 .checkin-sub {
-  margin: 0.2rem 0 0;
+  margin: 0.25rem 0 0;
   color: rgba(244, 248, 245, 0.78);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
 }
 
 .checkin-card {
-  background: rgba(252, 254, 252, 0.97);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf8 100%);
   color: var(--ink);
-  border-radius: 22px;
-  padding: 1.25rem;
-  box-shadow: var(--shadow-lg);
+  border-radius: 26px;
+  padding: 1.15rem 1.15rem 1.25rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.checkin-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.15rem;
+}
+
+.checkin-step-num {
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-top: 0.15rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.checkin-step-body label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.checkin-search {
+  font-size: 1.05rem;
+  min-height: 3rem;
+  border-radius: 16px;
 }
 
 .checkin-results {
-  min-height: 4.5rem;
-  margin: 0.75rem 0 1rem;
+  margin-top: 0.65rem;
+  min-height: 3.2rem;
+}
+
+.checkin-hint {
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  background: #eef4f0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.checkin-hint-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 
 .checkin-worker-list {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  max-height: 240px;
+  max-height: 220px;
   overflow: auto;
+  padding-right: 0.15rem;
 }
 
 .checkin-worker {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
+  align-items: center;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem 0.9rem;
-  border-radius: 14px;
+  padding: 0.7rem 0.8rem;
+  border-radius: 16px;
   border: 1px solid var(--line-soft);
-  background: var(--surface);
+  background: #fff;
   color: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s var(--ease);
 }
 
-.checkin-worker span {
+.checkin-worker-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #24755a, #1a5542);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.checkin-worker-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.checkin-worker-meta strong {
+  font-size: 1rem;
+}
+
+.checkin-worker-meta > span {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .checkin-worker.is-selected,
 .checkin-worker:hover {
-  border-color: var(--brand);
+  border-color: #7fad98;
   background: var(--brand-soft);
+  transform: translateY(-1px);
 }
 
 .checkin-meals {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
 }
 
 .checkin-meal {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 3rem;
-  border-radius: 14px;
-  border: 1px solid var(--line);
+  gap: 0.65rem;
+  min-height: 4.4rem;
+  padding: 0.75rem 0.8rem;
+  border-radius: 18px;
+  border: 1.5px solid #d5e2da;
   background: #fff;
   cursor: pointer;
-  font-weight: 650;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s var(--ease);
 }
 
 .checkin-meal input {
@@ -2394,18 +2486,71 @@ table.data tbody tr:last-child td {
   pointer-events: none;
 }
 
-.checkin-meal:has(input:checked),
-.checkin-meal.is-suggested:has(input:checked) {
+.checkin-meal-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: #eef4f0;
+  color: var(--brand);
+}
+
+.checkin-meal-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.checkin-meal-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.checkin-meal-text strong {
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.checkin-meal-text small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.checkin-meal:hover {
+  transform: translateY(-1px);
+  border-color: #9fbeaf;
+}
+
+.checkin-meal:has(input:checked) {
   border-color: var(--brand);
-  background: var(--brand-soft);
-  color: var(--brand-deep);
-  box-shadow: inset 0 0 0 1px var(--brand);
+  background: linear-gradient(160deg, #e7f4ee, #f7fbf8);
+  box-shadow: 0 10px 24px rgba(26, 85, 66, 0.12);
+}
+
+.checkin-meal:has(input:checked) .checkin-meal-icon {
+  background: var(--brand);
+  color: #fff;
+}
+
+.checkin-meal:has(input:checked) .checkin-meal-text small {
+  color: var(--brand-mid);
 }
 
 .checkin-submit {
   width: 100%;
-  margin-top: 1rem;
-  min-height: 3rem;
+  margin-top: 0.25rem;
+  min-height: 3.15rem;
+  border-radius: 16px;
+  font-size: 1.05rem;
+}
+
+.checkin-result {
+  text-align: center;
+  padding: 1.5rem 1.2rem;
 }
 
 .checkin-result h1 {
@@ -2453,8 +2598,12 @@ table.data tbody tr:last-child td {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 420px) {
   .checkin-meals {
     grid-template-columns: 1fr;
+  }
+
+  .checkin-brand {
+    align-items: flex-start;
   }
 }

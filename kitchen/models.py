@@ -18,6 +18,7 @@ class Unit(models.TextChoices):
 class MealType(models.TextChoices):
     BREAKFAST = 'breakfast', 'Nonushta'
     LUNCH = 'lunch', 'Tushlik'
+    AFTERNOON = 'afternoon', 'Kunduzgi'
     DINNER = 'dinner', 'Kechki ovqat'
     OTHER = 'other', 'Boshqa'
 
@@ -666,7 +667,8 @@ class MealCheckin(models.Model):
     MEAL_CHOICES = (
         (MealType.BREAKFAST, 'Nonushta'),
         (MealType.LUNCH, 'Tushlik'),
-        (MealType.DINNER, 'Ujin'),
+        (MealType.AFTERNOON, 'Kunduzgi'),
+        (MealType.DINNER, 'Kechki ovqat'),
     )
 
     worker = models.ForeignKey(Worker, on_delete=models.PROTECT, related_name='meal_checkins')

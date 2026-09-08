@@ -73,7 +73,13 @@
           <td>{{ report.totals.by_meal.lunch.diff|intcomma }}</td>
         </tr>
         <tr>
-          <td><strong>Ujin</strong></td>
+          <td><strong>Kunduzgi</strong></td>
+          <td>{{ report.totals.by_meal.afternoon.cooked|intcomma }}</td>
+          <td>{{ report.totals.by_meal.afternoon.eaten|intcomma }}</td>
+          <td>{{ report.totals.by_meal.afternoon.diff|intcomma }}</td>
+        </tr>
+        <tr>
+          <td><strong>Kechki ovqat</strong></td>
           <td>{{ report.totals.by_meal.dinner.cooked|intcomma }}</td>
           <td>{{ report.totals.by_meal.dinner.eaten|intcomma }}</td>
           <td>{{ report.totals.by_meal.dinner.diff|intcomma }}</td>
@@ -118,7 +124,7 @@
   <div class="table-wrap">
     <table class="data">
       <thead>
-        <tr><th>Ishchi</th><th>Bo‘lim</th><th>Nonushta</th><th>Tushlik</th><th>Ujin</th><th>Jami</th><th>Kunlar</th></tr>
+        <tr><th>Ishchi</th><th>Bo‘lim</th><th>Nonushta</th><th>Tushlik</th><th>Kunduzgi</th><th>Kechki</th><th>Jami</th><th>Kunlar</th></tr>
       </thead>
       <tbody>
         {% for row in report.worker_rows %}
@@ -127,12 +133,13 @@
           <td>{{ row.department|default:"—" }}</td>
           <td>{{ row.breakfast }}</td>
           <td>{{ row.lunch }}</td>
+          <td>{{ row.afternoon }}</td>
           <td>{{ row.dinner }}</td>
           <td><strong>{{ row.total }}</strong></td>
           <td>{{ row.days_count }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="empty">QR yozuv yo‘q</td></tr>
+        <tr><td colspan="8" class="empty">QR yozuv yo‘q</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -10,17 +10,25 @@ from kitchen.models import CookBatch, MealCheckin, MealType, Worker
 from kitchen.utils import local_month_bounds
 
 
-MEAL_ORDER = (MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
+MEAL_ORDER = (MealType.BREAKFAST, MealType.LUNCH, MealType.AFTERNOON, MealType.DINNER)
 MEAL_LABELS = dict(MealCheckin.MEAL_CHOICES)
+MEAL_HINTS = {
+    MealType.BREAKFAST: 'Ertalab',
+    MealType.LUNCH: 'Tush payti',
+    MealType.AFTERNOON: 'Kunduz',
+    MealType.DINNER: 'Kechqurun',
+}
 
 
 def suggest_meal_type(now=None):
     now = now or timezone.localtime()
     hour = now.hour
-    if hour < 11:
+    if hour < 10:
         return MealType.BREAKFAST
-    if hour < 16:
+    if hour < 14:
         return MealType.LUNCH
+    if hour < 17:
+        return MealType.AFTERNOON
     return MealType.DINNER
 
 
@@ -167,6 +175,7 @@ def build_meal_report(year, month):
                 'employee_code': bucket['employee_code'],
                 'breakfast': bucket['meals'][MealType.BREAKFAST],
                 'lunch': bucket['meals'][MealType.LUNCH],
+                'afternoon': bucket['meals'][MealType.AFTERNOON],
                 'dinner': bucket['meals'][MealType.DINNER],
                 'total': bucket['total'],
                 'days_count': len(bucket['days']),
@@ -200,4 +209,5 @@ def build_meal_report(year, month):
         'checkin_count': len(checkins),
         'meal_labels': MEAL_LABELS,
         'meal_order': MEAL_ORDER,
+        'meal_hints': MEAL_HINTS,
     }
