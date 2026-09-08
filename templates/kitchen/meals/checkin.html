@@ -32,6 +32,23 @@
         <div class="checkin-step">
           <div class="checkin-step-num">1</div>
           <div class="checkin-step-body">
+            <label for="id_served_on">Sana</label>
+            <input
+              class="form-input checkin-search"
+              id="id_served_on"
+              type="date"
+              name="served_on"
+              value="{{ today|date:'Y-m-d' }}"
+              max="{{ today|date:'Y-m-d' }}"
+              required
+            >
+            <p class="muted-note" style="margin-top:0.35rem">Eski kunlarni ham belgilash mumkin</p>
+          </div>
+        </div>
+
+        <div class="checkin-step">
+          <div class="checkin-step-num">2</div>
+          <div class="checkin-step-body">
             <label for="worker-search">Ism / familiya</label>
             <input
               class="form-input checkin-search"
@@ -53,7 +70,7 @@
         </div>
 
         <div class="checkin-step">
-          <div class="checkin-step-num">2</div>
+          <div class="checkin-step-num">3</div>
           <div class="checkin-step-body">
             <label>Qaysi mahal?</label>
             <div class="checkin-meals" role="radiogroup" aria-label="Ovqat mahali">

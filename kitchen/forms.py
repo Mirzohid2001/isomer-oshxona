@@ -8,6 +8,7 @@ from kitchen.models import (
     DailyMenu,
     DailyMenuItem,
     HygieneCheck,
+    MealCheckin,
     MenuTemplate,
     MenuTemplateItem,
     MonthlyBudget,
@@ -292,6 +293,47 @@ class WorkerForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Worker
         fields = ['last_name', 'first_name', 'employee_code', 'department', 'is_active']
+
+
+class WorkerImportForm(StyledFormMixin, forms.Form):
+    file = forms.FileField(
+        label='Excel fayl (.xlsx)',
+        help_text='Ustunlar: Familiya | Ism | Bo‘lim | Kod',
+    )
+
+
+class StaffMealCheckinForm(StyledFormMixin, forms.Form):
+    worker = forms.ModelChoiceField(
+        queryset=Worker.objects.filter(is_active=True),
+        label='Ishchi',
+    )
+    meal_type = forms.ChoiceField(choices=MealCheckin.MEAL_CHOICES, label='Mahal')
+    served_on = forms.DateField(
+        label='Sana',
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+
+    def clean_served_on(self):
+        value = self.cleaned_data['served_on']
+        if value > timezone.localdate():
+            raise forms.ValidationError('Kelajak sanasini tanlab bo‘lmaydi.')
+        return value
+
+
+class MealCheckinEditForm(StyledFormMixin, forms.Form):
+    worker = forms.ModelChoiceField(queryset=Worker.objects.all(), label='Ishchi')
+    meal_type = forms.ChoiceField(choices=MealCheckin.MEAL_CHOICES, label='Mahal')
+    served_on = forms.DateField(
+        label='Sana',
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+
+    def clean_served_on(self):
+        value = self.cleaned_data['served_on']
+        if value > timezone.localdate():
+            raise forms.ValidationError('Kelajak sanasini tanlab bo‘lmaydi.')
+        return value
 
 
 class BudgetForm(StyledFormMixin, forms.ModelForm):

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Bugungi ovqat — Oshxona{% endblock %}
+{% block page_title %}Bugungi ovqatlanish{% endblock %}
+{% block page_subtitle %}{{ selected_day|date:"d.m.Y" }} · jonli hisob{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <form method="get" class="toolbar-form">
+    <div class="form-field">
+      <label>Sana</label>
+      <input class="form-input" type="date" name="date" value="{{ selected_day|date:'Y-m-d' }}">
+    </div>
+    <button class="btn btn-ghost" type="submit">Ko‘rsatish</button>
+  </form>
+  <div class="toolbar-actions">
+    <a class="btn btn-ghost" href="{% url 'meal_checkin_list' %}?date={{ selected_day|date:'Y-m-d' }}">Barcha yozuvlar</a>
+    <a class="btn btn-ghost" href="{% url 'meal_report' %}">Oy otchoti</a>
+    <a class="btn btn-ghost" href="{% url 'worker_list' %}">Ishchilar</a>
+  </div>
+</div>
+
+<div
+  id="today-live"
+  hx-get="{% url 'meal_today' %}?date={{ selected_day|date:'Y-m-d' }}&partial=1"
+  hx-trigger="every 12s"
+  hx-swap="innerHTML"
+>
+  {% include "kitchen/meals/partials/today_live.html" %}
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head"><h3>Qo‘lda belgilash (eski kun ham)</h3></div>
+  <div class="panel-body">
+    <form method="post" action="{% url 'meal_checkin_manual' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next_date" value="{{ selected_day|date:'Y-m-d' }}">
+      <div class="form-grid">
+        {% for field in form %}
+        <div class="form-field">
+          <label>{{ field.label }}</label>
+          {{ field }}
+          {% include "kitchen/partials/field_errors.html" %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">Belgilash</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

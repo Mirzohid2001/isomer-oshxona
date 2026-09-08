@@ -1062,3 +1062,50 @@ class MealCheckinTests(TestCase):
         found = list(search_workers('Karimov Ali'))
         self.assertEqual(len(found), 1)
         self.assertEqual(found[0].pk, self.worker.pk)
+
+    def test_worker_excel_import_and_today_board(self):
+        from io import BytesIO
+        from openpyxl import Workbook
+
+        self.client.login(username='mealadmin', password='x')
+        wb = Workbook()
+        ws = wb.active
+        ws.append(['Familiya', 'Ism', 'Bo‘lim', 'Kod'])
+        ws.append(['Yusupov', 'Botir', 'Sex-3', '777'])
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        buf.name = 'workers.xlsx'
+        resp = self.client.post(reverse('worker_import'), {'file': buf})
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Worker.objects.filter(employee_code='777').exists())
+
+        past = timezone.localdate() - timedelta(days=3)
+        record_meal_checkin(
+            worker=self.worker,
+            meal_type=MealType.LUNCH,
+            served_on=past,
+        )
+        self.assertEqual(
+            MealCheckin.objects.get(worker=self.worker, served_on=past).meal_type,
+            MealType.LUNCH,
+        )
+        board = self.client.get(reverse('meal_today'))
+        self.assertEqual(board.status_code, 200)
+        self.assertContains(board, 'Bugungi')
+
+        checkin = MealCheckin.objects.get(worker=self.worker, served_on=past)
+        edit = self.client.post(
+            reverse('meal_checkin_edit', args=[checkin.pk]),
+            {
+                'worker': self.worker.pk,
+                'meal_type': MealType.DINNER,
+                'served_on': past.isoformat(),
+            },
+        )
+        self.assertEqual(edit.status_code, 302)
+        checkin.refresh_from_db()
+        self.assertEqual(checkin.meal_type, MealType.DINNER)
+        deleted = self.client.post(reverse('meal_checkin_delete', args=[checkin.pk]))
+        self.assertEqual(deleted.status_code, 302)
+        self.assertFalse(MealCheckin.objects.filter(pk=checkin.pk).exists())

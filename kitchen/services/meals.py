@@ -48,18 +48,20 @@ def search_workers(query, limit=20):
 
 
 @transaction.atomic
-def record_meal_checkin(*, worker, meal_type, served_at=None):
+def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None):
     """Bir ishchi / kun / mahal — faqat bir marta. Takror bo‘lsa ValueError."""
+    from kitchen.services.worker_ops import resolve_served_at
+
     if meal_type not in MEAL_LABELS:
         raise ValueError('Noto‘g‘ri ovqat turi.')
     worker = Worker.objects.select_for_update().get(pk=worker.pk)
     if not worker.is_active:
         raise ValueError('Ishchi faol emas.')
 
-    when = served_at or timezone.now()
-    if timezone.is_naive(when):
-        when = timezone.make_aware(when, timezone.get_current_timezone())
+    when = resolve_served_at(served_on=served_on, served_at=served_at)
     day = timezone.localtime(when).date()
+    if day > timezone.localdate():
+        raise ValueError('Kelajak sanasini tanlab bo‘lmaydi.')
 
     try:
         return MealCheckin.objects.create(
@@ -70,8 +72,8 @@ def record_meal_checkin(*, worker, meal_type, served_at=None):
         )
     except IntegrityError as exc:
         raise ValueError(
-            f'{worker.full_name} bugun ({day.strftime("%d.%m.%Y")}) '
-            f'{MEAL_LABELS[meal_type]} uchun allaqachon belgilangan.'
+            f'{worker.full_name} · {day.strftime("%d.%m.%Y")} · '
+            f'{MEAL_LABELS[meal_type]} allaqachon belgilangan.'
         ) from exc
 
 

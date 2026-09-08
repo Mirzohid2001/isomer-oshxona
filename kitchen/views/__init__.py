@@ -72,6 +72,10 @@ from kitchen.views.reports import (
 )
 from kitchen.views.meals import (
     meal_checkin,
+    meal_checkin_delete,
+    meal_checkin_edit,
+    meal_checkin_list,
+    meal_checkin_manual,
     meal_checkin_search,
     meal_checkin_submit,
     meal_qr_door_download,
@@ -80,8 +84,11 @@ from kitchen.views.meals import (
     meal_qr_poster,
     meal_report,
     meal_report_export,
+    meal_today,
     worker_create,
     worker_edit,
+    worker_import,
+    worker_import_template,
     worker_list,
 )
 from kitchen.views.stock_views import (
@@ -174,10 +181,17 @@ __all__ = [
     'worker_list',
     'worker_create',
     'worker_edit',
+    'worker_import',
+    'worker_import_template',
     'meal_qr_poster',
     'meal_qr_image',
     'meal_qr_download',
     'meal_qr_door_download',
+    'meal_today',
+    'meal_checkin_manual',
+    'meal_checkin_list',
+    'meal_checkin_edit',
+    'meal_checkin_delete',
     'meal_report',
     'meal_report_export',
 ]

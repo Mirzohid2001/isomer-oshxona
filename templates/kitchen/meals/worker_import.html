@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Ishchilar import — Oshxona{% endblock %}
+{% block page_title %}Excel’dan ishchilar{% endblock %}
+{% block page_subtitle %}Ustunlar: Familiya · Ism · Bo‘lim · Kod{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'worker_import_template' %}">Shablon yuklab olish</a>
+    <a class="btn btn-ghost" href="{% url 'worker_list' %}">Ro‘yxat</a>
+  </div>
+</div>
+<div class="panel panel-limited">
+  <div class="panel-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>{{ form.file.label }}</label>
+          {{ form.file }}
+          {% if form.file.help_text %}<p class="muted-note">{{ form.file.help_text }}</p>{% endif %}
+          {% include "kitchen/partials/field_errors.html" with field=form.file %}
+        </div>
+      </div>
+      <p class="muted-note">Kod bo‘lsa shu bilan yangilanadi. Kod bo‘lmasa familiya+ism bo‘yicha qidiriladi.</p>
+      <div class="form-actions">
+        <button class="btn" type="submit">Import qilish</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
