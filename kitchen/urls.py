@@ -79,6 +79,9 @@ urlpatterns = [
     path('workers/new/', views.worker_create, name='worker_create'),
     path('workers/<int:pk>/edit/', views.worker_edit, name='worker_edit'),
     path('workers/qr/', views.meal_qr_poster, name='meal_qr_poster'),
+    path('workers/qr/image.png', views.meal_qr_image, name='meal_qr_image'),
+    path('workers/qr/download.png', views.meal_qr_download, name='meal_qr_download'),
+    path('workers/qr/eshik.png', views.meal_qr_door_download, name='meal_qr_door_download'),
     path('meals/report/', views.meal_report, name='meal_report'),
     path('meals/report/export/', views.meal_report_export, name='meal_report_export'),
 ]

@@ -1048,6 +1048,15 @@ class MealCheckinTests(TestCase):
         qr = self.client.get(reverse('meal_qr_poster'))
         self.assertEqual(qr.status_code, 200)
         self.assertContains(qr, 'ovqat')
+        dl = self.client.get(reverse('meal_qr_download'))
+        self.assertEqual(dl.status_code, 200)
+        self.assertEqual(dl['Content-Type'], 'image/png')
+        self.assertIn('attachment', dl['Content-Disposition'])
+        self.assertGreater(len(dl.content), 200)
+        door = self.client.get(reverse('meal_qr_door_download'))
+        self.assertEqual(door.status_code, 200)
+        self.assertEqual(door['Content-Type'], 'image/png')
+        self.assertIn('eshik', door['Content-Disposition'])
 
     def test_search_workers_multi_token(self):
         found = list(search_workers('Karimov Ali'))

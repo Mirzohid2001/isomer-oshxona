@@ -1,9 +1,10 @@
-from urllib.parse import quote
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,18 +21,13 @@ from kitchen.services.meals import (
     search_workers,
     suggest_meal_type,
 )
+from kitchen.services.qr_poster import (
+    checkin_absolute_url,
+    door_poster_png_bytes,
+    png_download_response,
+    qr_png_bytes,
+)
 from kitchen.utils import paginate
-
-
-def _checkin_url(request):
-    return request.build_absolute_uri(reverse('meal_checkin'))
-
-
-def _qr_image_url(data, size=320):
-    return (
-        'https://api.qrserver.com/v1/create-qr-code/'
-        f'?size={size}x{size}&margin=12&data={quote(data, safe="")}'
-    )
 
 
 # --- Public QR flow (login yo‘q) ---
@@ -151,15 +147,43 @@ def worker_edit(request, pk):
 
 @login_required
 def meal_qr_poster(request):
-    url = _checkin_url(request)
+    url = checkin_absolute_url(request)
     return render(
         request,
         'kitchen/meals/qr_poster.html',
         {
             'checkin_url': url,
-            'qr_image_url': _qr_image_url(url, size=360),
+            'qr_preview_url': reverse('meal_qr_image'),
         },
     )
+
+
+@login_required
+@require_GET
+def meal_qr_image(request):
+    """Sahifada ko‘rsatish / oddiy QR PNG."""
+    payload = qr_png_bytes(checkin_absolute_url(request), box_size=12, border=2)
+    return HttpResponse(payload, content_type='image/png')
+
+
+@login_required
+@require_GET
+def meal_qr_download(request):
+    """Faqat QR — yuqori sifatda yuklab olish."""
+    payload = qr_png_bytes(checkin_absolute_url(request), box_size=20, border=2)
+    return png_download_response(payload, 'isomer-ovqatlanish-qr.png')
+
+
+@login_required
+@require_GET
+def meal_qr_door_download(request):
+    """Eshikka qo‘yish uchun tayyor plakat (PNG)."""
+    logo = Path(settings.BASE_DIR) / 'static' / 'img' / 'isomer-logo.png'
+    payload = door_poster_png_bytes(
+        checkin_absolute_url(request),
+        logo_path=str(logo) if logo.exists() else None,
+    )
+    return png_download_response(payload, 'isomer-ovqatlanish-eshik-plakat.png')
 
 
 @login_required
