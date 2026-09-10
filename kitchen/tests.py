@@ -1019,16 +1019,36 @@ class MealCheckinTests(TestCase):
 
     def test_report_sverka_cooked_vs_eaten(self):
         cook_recipe(recipe=self.recipe, portions=10, user=self.user)
-        record_meal_checkin(worker=self.worker, meal_type=MealType.LUNCH)
+        record_meal_checkin(worker=self.worker, meal_type=MealType.LUNCH, portions=3)
         w2 = Worker.objects.create(first_name='Vali', last_name='Sobirov')
-        record_meal_checkin(worker=w2, meal_type=MealType.LUNCH)
+        record_meal_checkin(worker=w2, meal_type=MealType.LUNCH, portions=2)
         today = timezone.localdate()
         report = build_meal_report(today.year, today.month)
-        self.assertEqual(report['totals']['eaten'], 2)
+        self.assertEqual(report['totals']['eaten'], 5)
+        self.assertEqual(report['portion_total'], 5)
+        self.assertEqual(report['checkin_count'], 2)
         self.assertEqual(report['totals']['cooked'], 10)
-        self.assertEqual(report['totals']['diff'], 8)
-        self.assertEqual(report['totals']['by_meal'][MealType.LUNCH]['eaten'], 2)
+        self.assertEqual(report['totals']['diff'], 5)
+        self.assertEqual(report['totals']['by_meal'][MealType.LUNCH]['eaten'], 5)
         self.assertEqual(report['unique_workers'], 2)
+
+    def test_public_checkin_portions_default_one(self):
+        ok = self.client.post(
+            reverse('meal_checkin_submit'),
+            {'worker_id': self.worker.pk, 'meal_type': MealType.LUNCH},
+        )
+        self.assertEqual(ok.status_code, 200)
+        checkin = MealCheckin.objects.get()
+        self.assertEqual(checkin.portions, 1)
+
+    def test_public_checkin_custom_portions(self):
+        ok = self.client.post(
+            reverse('meal_checkin_submit'),
+            {'worker_id': self.worker.pk, 'meal_type': MealType.LUNCH, 'portions': '20'},
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertContains(ok, '20 porsiya')
+        self.assertEqual(MealCheckin.objects.get().portions, 20)
 
     def test_excel_export_and_staff_pages(self):
         self.client.login(username='mealadmin', password='x')
@@ -1100,12 +1120,14 @@ class MealCheckinTests(TestCase):
             {
                 'worker': self.worker.pk,
                 'meal_type': MealType.DINNER,
+                'portions': '3',
                 'served_on': past.isoformat(),
             },
         )
         self.assertEqual(edit.status_code, 302)
         checkin.refresh_from_db()
         self.assertEqual(checkin.meal_type, MealType.DINNER)
+        self.assertEqual(checkin.portions, 3)
         deleted = self.client.post(reverse('meal_checkin_delete', args=[checkin.pk]))
         self.assertEqual(deleted.status_code, 302)
         self.assertFalse(MealCheckin.objects.filter(pk=checkin.pk).exists())

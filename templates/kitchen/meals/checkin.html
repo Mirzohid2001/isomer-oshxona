@@ -98,6 +98,26 @@
           </div>
         </div>
 
+        <div class="checkin-step">
+          <div class="checkin-step-num">4</div>
+          <div class="checkin-step-body">
+            <label for="id_portions">Porsiya</label>
+            <input
+              class="form-input checkin-search checkin-portions"
+              id="id_portions"
+              type="number"
+              name="portions"
+              value="1"
+              min="1"
+              max="500"
+              step="1"
+              inputmode="numeric"
+              required
+            >
+            <p class="muted-note" style="margin-top:0.35rem">Odatiy 1. Bir necha porsiya yoki boshqa joyga yuborilgan ovqat uchun o‘zgartiring</p>
+          </div>
+        </div>
+
         <button class="btn btn-accent checkin-submit" type="submit" id="checkin-submit" disabled>
           Tasdiqlash
         </button>

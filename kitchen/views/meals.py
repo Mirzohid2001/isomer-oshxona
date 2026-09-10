@@ -86,12 +86,14 @@ def meal_checkin_submit(request):
     worker_id = request.POST.get('worker_id')
     meal_type = request.POST.get('meal_type')
     served_on = parse_date(request.POST.get('served_on'), timezone.localdate())
+    portions_raw = request.POST.get('portions') or '1'
     worker = get_object_or_404(Worker, pk=worker_id, is_active=True)
     try:
         checkin = record_meal_checkin(
             worker=worker,
             meal_type=meal_type,
             served_on=served_on,
+            portions=portions_raw,
         )
     except ValueError as exc:
         return render(
@@ -263,6 +265,7 @@ def meal_checkin_manual(request):
                 worker=form.cleaned_data['worker'],
                 meal_type=form.cleaned_data['meal_type'],
                 served_on=form.cleaned_data['served_on'],
+                portions=form.cleaned_data['portions'],
             )
             messages.success(request, 'Ovqatlanish belgilandi.')
         except ValueError as exc:
@@ -312,6 +315,7 @@ def meal_checkin_edit(request, pk):
     initial = {
         'worker': checkin.worker_id,
         'meal_type': checkin.meal_type,
+        'portions': checkin.portions,
         'served_on': checkin.served_on,
     }
     form = MealCheckinEditForm(request.POST or None, initial=initial)
@@ -322,6 +326,7 @@ def meal_checkin_edit(request, pk):
                 worker=form.cleaned_data['worker'],
                 meal_type=form.cleaned_data['meal_type'],
                 served_on=form.cleaned_data['served_on'],
+                portions=form.cleaned_data['portions'],
             )
             messages.success(request, 'Yozuv yangilandi.')
             return redirect('meal_checkin_list')

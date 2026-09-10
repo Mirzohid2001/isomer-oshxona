@@ -308,6 +308,7 @@ class StaffMealCheckinForm(StyledFormMixin, forms.Form):
         label='Ishchi',
     )
     meal_type = forms.ChoiceField(choices=MealCheckin.MEAL_CHOICES, label='Mahal')
+    portions = forms.IntegerField(min_value=1, max_value=500, initial=1, label='Porsiya')
     served_on = forms.DateField(
         label='Sana',
         initial=timezone.localdate,
@@ -324,6 +325,7 @@ class StaffMealCheckinForm(StyledFormMixin, forms.Form):
 class MealCheckinEditForm(StyledFormMixin, forms.Form):
     worker = forms.ModelChoiceField(queryset=Worker.objects.all(), label='Ishchi')
     meal_type = forms.ChoiceField(choices=MealCheckin.MEAL_CHOICES, label='Mahal')
+    portions = forms.IntegerField(min_value=1, max_value=500, initial=1, label='Porsiya')
     served_on = forms.DateField(
         label='Sana',
         widget=forms.DateInput(attrs={'type': 'date'}),

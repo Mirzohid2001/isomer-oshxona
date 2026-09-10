@@ -28,9 +28,17 @@ def resolve_served_at(served_on=None, served_at=None):
 
 
 @transaction.atomic
-def update_meal_checkin(*, checkin, worker, meal_type, served_on):
+def update_meal_checkin(*, checkin, worker, meal_type, served_on, portions=1):
     if meal_type not in MEAL_LABELS:
         raise ValueError('Noto‘g‘ri ovqat turi.')
+    try:
+        portions = int(portions)
+    except (TypeError, ValueError):
+        raise ValueError('Porsiya soni noto‘g‘ri.')
+    if portions < 1:
+        raise ValueError('Porsiya kamida 1 bo‘lishi kerak.')
+    if portions > 500:
+        raise ValueError('Porsiya juda katta (maks. 500).')
     if not worker.is_active and worker.pk != checkin.worker_id:
         raise ValueError('Ishchi faol emas.')
     if served_on > timezone.localdate():
@@ -52,9 +60,10 @@ def update_meal_checkin(*, checkin, worker, meal_type, served_on):
     checkin = MealCheckin.objects.select_for_update().get(pk=checkin.pk)
     checkin.worker = worker
     checkin.meal_type = meal_type
+    checkin.portions = portions
     checkin.served_on = served_on
     checkin.served_at = when
-    checkin.save(update_fields=['worker', 'meal_type', 'served_on', 'served_at'])
+    checkin.save(update_fields=['worker', 'meal_type', 'portions', 'served_on', 'served_at'])
     return checkin
 
 
@@ -71,13 +80,15 @@ def build_today_board(day=None):
     )
     by_meal = {m: 0 for m in MEAL_ORDER}
     for row in checkins:
-        by_meal[row.meal_type] = by_meal.get(row.meal_type, 0) + 1
+        by_meal[row.meal_type] = by_meal.get(row.meal_type, 0) + int(row.portions or 1)
     unique_workers = len({c.worker_id for c in checkins})
+    portion_total = sum(int(c.portions or 1) for c in checkins)
     return {
         'day': day,
         'checkins': checkins,
         'by_meal': by_meal,
         'total': len(checkins),
+        'portion_total': portion_total,
         'unique_workers': unique_workers,
         'meal_order': MEAL_ORDER,
         'meal_labels': MEAL_LABELS,

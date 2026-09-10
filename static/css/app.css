@@ -2548,6 +2548,11 @@ table.data tbody tr:last-child td {
   font-size: 1.05rem;
 }
 
+.checkin-portions {
+  max-width: 8rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .checkin-result {
   text-align: center;
   padding: 1.5rem 1.2rem;

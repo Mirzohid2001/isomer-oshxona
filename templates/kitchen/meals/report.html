@@ -33,6 +33,10 @@
 
 <div class="stats-grid">
   <div class="stat">
+    <div class="stat-label">Yeyilgan porsiya</div>
+    <div class="stat-value">{{ report.portion_total|intcomma }}</div>
+  </div>
+  <div class="stat">
     <div class="stat-label">QR yozuvlar</div>
     <div class="stat-value">{{ report.checkin_count|intcomma }}</div>
   </div>
@@ -43,10 +47,6 @@
   <div class="stat">
     <div class="stat-label">Pishirilgan</div>
     <div class="stat-value">{{ report.totals.cooked|intcomma }}</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Yeyilgan</div>
-    <div class="stat-value">{{ report.totals.eaten|intcomma }}</div>
   </div>
   <div class="stat">
     <div class="stat-label">Farq (pish − yey)</div>
@@ -154,18 +154,19 @@
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Sana</th><th>Vaqt</th><th>Mahal</th><th>Ishchi</th><th>Bo‘lim</th></tr></thead>
+      <thead><tr><th>Sana</th><th>Vaqt</th><th>Mahal</th><th>Porsiya</th><th>Ishchi</th><th>Bo‘lim</th></tr></thead>
       <tbody>
         {% for row in report.journal|slice:":200" %}
         <tr>
           <td>{{ row.served_on|date:"d.m.Y" }}</td>
           <td>{{ row.served_at|time:"H:i" }}</td>
           <td>{{ row.meal_label }}</td>
+          <td>{{ row.portions }}</td>
           <td>{{ row.worker }}</td>
           <td>{{ row.department|default:"—" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="empty">Jurnal bo‘sh</td></tr>
+        <tr><td colspan="6" class="empty">Jurnal bo‘sh</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -14,7 +14,7 @@
       {% if ok %}
       <p class="checkin-eyebrow">Tasdiqlandi</p>
       <h1>{{ worker.full_name }}</h1>
-      <p class="checkin-sub">{{ meal_label }} · {{ checkin.served_on|date:"d.m.Y" }} · {{ checkin.served_at|time:"H:i" }}</p>
+      <p class="checkin-sub">{{ meal_label }} · {{ checkin.portions }} porsiya · {{ checkin.served_on|date:"d.m.Y" }} · {{ checkin.served_at|time:"H:i" }}</p>
       <p class="muted-note">Yozuv tizimga tushdi. Rahmat!</p>
       {% else %}
       <p class="checkin-eyebrow">Yuborilmadi</p>

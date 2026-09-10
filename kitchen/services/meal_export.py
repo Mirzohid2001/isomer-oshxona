@@ -59,7 +59,7 @@ def meal_report_excel(report):
     ws['A3'] = f'Yaratilgan: {generated}'
     ws['A3'].font = META_FONT
 
-    headers = ['Sana', 'Mahal', 'Pishirilgan porsiya', 'Yeyilgan (QR)', 'Farq', 'Izoh']
+    headers = ['Sana', 'Mahal', 'Pishirilgan porsiya', 'Yeyilgan porsiya', 'Farq', 'Izoh']
     for i, h in enumerate(headers, 1):
         ws.cell(row=5, column=i, value=h)
     _style_header_row(ws, 5, len(headers))
@@ -163,7 +163,7 @@ def meal_report_excel(report):
             '',
             '',
             '',
-            report['checkin_count'],
+            report.get('portion_total', report['checkin_count']),
             '',
         ],
         1,
@@ -178,10 +178,10 @@ def meal_report_excel(report):
     ws3 = wb.create_sheet('Jurnal')
     ws3['A1'] = 'Batafsil jurnal (har bir QR belgilash)'
     ws3['A1'].font = TITLE_FONT
-    ws3.merge_cells('A1:F1')
+    ws3.merge_cells('A1:G1')
     ws3['A2'] = subtitle
     ws3['A2'].font = SUB_FONT
-    headers3 = ['Sana', 'Vaqt', 'Mahal', 'Ishchi', 'Bo‘lim', 'Kod']
+    headers3 = ['Sana', 'Vaqt', 'Mahal', 'Porsiya', 'Ishchi', 'Bo‘lim', 'Kod']
     for i, h in enumerate(headers3, 1):
         ws3.cell(row=4, column=i, value=h)
     _style_header_row(ws3, 4, len(headers3))
@@ -192,6 +192,7 @@ def meal_report_excel(report):
             row['served_on'].strftime('%d.%m.%Y'),
             local_at.strftime('%H:%M:%S'),
             row['meal_label'],
+            row.get('portions', 1),
             row['worker'],
             row['department'] or '—',
             row['employee_code'] or '—',

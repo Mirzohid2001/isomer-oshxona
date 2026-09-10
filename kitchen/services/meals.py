@@ -48,12 +48,21 @@ def search_workers(query, limit=20):
 
 
 @transaction.atomic
-def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None):
+def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None, portions=1):
     """Bir ishchi / kun / mahal — faqat bir marta. Takror bo‘lsa ValueError."""
     from kitchen.services.worker_ops import resolve_served_at
 
     if meal_type not in MEAL_LABELS:
         raise ValueError('Noto‘g‘ri ovqat turi.')
+    try:
+        portions = int(portions)
+    except (TypeError, ValueError):
+        raise ValueError('Porsiya soni noto‘g‘ri.')
+    if portions < 1:
+        raise ValueError('Porsiya kamida 1 bo‘lishi kerak.')
+    if portions > 500:
+        raise ValueError('Porsiya juda katta (maks. 500).')
+
     worker = Worker.objects.select_for_update().get(pk=worker.pk)
     if not worker.is_active:
         raise ValueError('Ishchi faol emas.')
@@ -67,13 +76,15 @@ def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None):
         return MealCheckin.objects.create(
             worker=worker,
             meal_type=meal_type,
+            portions=portions,
             served_on=day,
             served_at=when,
         )
     except IntegrityError as exc:
         raise ValueError(
             f'{worker.full_name} · {day.strftime("%d.%m.%Y")} · '
-            f'{MEAL_LABELS[meal_type]} allaqachon belgilangan.'
+            f'{MEAL_LABELS[meal_type]} allaqachon belgilangan. '
+            f'Tahrirlash orqali porsiyani o‘zgartiring.'
         ) from exc
 
 
@@ -113,7 +124,7 @@ def build_meal_report(year, month):
 
     eaten_by_day_meal = defaultdict(int)
     for row in checkins:
-        eaten_by_day_meal[(row.served_on, row.meal_type)] += 1
+        eaten_by_day_meal[(row.served_on, row.meal_type)] += int(row.portions or 1)
 
     daily_rows = []
     totals = {
@@ -151,6 +162,7 @@ def build_meal_report(year, month):
     worker_map = {}
     for row in checkins:
         w = row.worker
+        qty = int(row.portions or 1)
         bucket = worker_map.setdefault(
             w.pk,
             {
@@ -163,8 +175,8 @@ def build_meal_report(year, month):
                 'days': set(),
             },
         )
-        bucket['meals'][row.meal_type] += 1
-        bucket['total'] += 1
+        bucket['meals'][row.meal_type] += qty
+        bucket['total'] += qty
         bucket['days'].add(row.served_on)
 
     worker_rows = []
@@ -191,6 +203,7 @@ def build_meal_report(year, month):
             'served_at': row.served_at,
             'meal_type': row.meal_type,
             'meal_label': row.get_meal_type_display(),
+            'portions': int(row.portions or 1),
             'worker': row.worker.full_name,
             'department': row.worker.department,
             'employee_code': row.worker.employee_code,
@@ -198,6 +211,7 @@ def build_meal_report(year, month):
         for row in checkins
     ]
 
+    portion_total = sum(int(c.portions or 1) for c in checkins)
     return {
         'year': year,
         'month': month,
@@ -209,6 +223,7 @@ def build_meal_report(year, month):
         'totals': totals,
         'unique_workers': len(worker_rows),
         'checkin_count': len(checkins),
+        'portion_total': portion_total,
         'meal_labels': MEAL_LABELS,
         'meal_order': MEAL_ORDER,
         'meal_hints': MEAL_HINTS,

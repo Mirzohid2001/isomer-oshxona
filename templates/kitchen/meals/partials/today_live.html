@@ -1,7 +1,11 @@
 {% load humanize %}
 <div class="stats-grid">
   <div class="stat">
-    <div class="stat-label">Jami belgilash</div>
+    <div class="stat-label">Jami porsiya</div>
+    <div class="stat-value">{{ board.portion_total|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Yozuvlar</div>
     <div class="stat-value">{{ board.total|intcomma }}</div>
   </div>
   <div class="stat">
@@ -29,18 +33,19 @@
 <div class="panel panel-spaced-top">
   <div class="panel-head">
     <h3>So‘nggi belgilashlar</h3>
-    <span class="muted-note">Avtomatik yangilanadi</span>
+    <span class="muted-note">Avtomatik yangilanadi · mahal sonlari = porsiya</span>
   </div>
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Vaqt</th><th>Ishchi</th><th>Mahal</th><th>Bo‘lim</th><th></th></tr></thead>
+      <thead><tr><th>Vaqt</th><th>Ishchi</th><th>Mahal</th><th>Porsiya</th><th>Bo‘lim</th><th></th></tr></thead>
       <tbody>
         {% for c in board.checkins %}
         <tr>
           <td>{{ c.served_at|time:"H:i" }}</td>
           <td><strong>{{ c.worker.full_name }}</strong></td>
           <td>{{ c.get_meal_type_display }}</td>
+          <td>{{ c.portions }}</td>
           <td>{{ c.worker.department|default:"—" }}</td>
           <td>
             <a class="btn btn-ghost btn-sm" href="{% url 'meal_checkin_edit' c.pk %}">Tahrir</a>
@@ -52,7 +57,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="empty">Hali belgilash yo‘q</td></tr>
+        <tr><td colspan="6" class="empty">Hali belgilash yo‘q</td></tr>
         {% endfor %}
       </tbody>
     </table>

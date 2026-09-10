@@ -152,7 +152,7 @@ class WorkerAdmin(admin.ModelAdmin):
 
 @admin.register(MealCheckin)
 class MealCheckinAdmin(admin.ModelAdmin):
-    list_display = ['served_on', 'served_at', 'worker', 'meal_type']
+    list_display = ['served_on', 'served_at', 'worker', 'meal_type', 'portions']
     list_filter = ['meal_type', 'served_on']
     search_fields = ['worker__last_name', 'worker__first_name']
     date_hierarchy = 'served_on'

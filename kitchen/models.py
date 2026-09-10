@@ -673,6 +673,11 @@ class MealCheckin(models.Model):
 
     worker = models.ForeignKey(Worker, on_delete=models.PROTECT, related_name='meal_checkins')
     meal_type = models.CharField(max_length=20, choices=MEAL_CHOICES)
+    portions = models.PositiveIntegerField(
+        'Porsiya',
+        default=1,
+        validators=[MinValueValidator(1)],
+    )
     served_on = models.DateField('Sana', db_index=True)
     served_at = models.DateTimeField('Vaqt', default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -694,7 +699,7 @@ class MealCheckin(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.worker} · {self.served_on} · {self.get_meal_type_display()}'
+        return f'{self.worker} · {self.served_on} · {self.get_meal_type_display()} × {self.portions}'
 
     def save(self, *args, **kwargs):
         if self.served_at and not self.served_on:
