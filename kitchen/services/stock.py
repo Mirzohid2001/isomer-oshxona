@@ -242,6 +242,9 @@ def receive_stock(
     _after_stock_change()
     if movement_type == MovementType.IN:
         log_action(user, 'prixod', 'product', product.pk, f'+{quantity} {product.unit}')
+        from kitchen.services.erp_isomerix import schedule_push_receipt
+
+        schedule_push_receipt(movement.pk, event='created')
     return movement
 
 
@@ -320,6 +323,9 @@ def update_receipt(
     _sync_product_expiry(product)
     _after_stock_change()
     log_action(user, 'prixod_tahrir', 'stock_movement', movement.pk, f'{product.name}: {old_qty}→{quantity}')
+    from kitchen.services.erp_isomerix import schedule_push_receipt
+
+    schedule_push_receipt(movement.pk, event='updated')
     return movement
 
 

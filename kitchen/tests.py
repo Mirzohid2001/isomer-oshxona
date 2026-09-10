@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
@@ -1131,3 +1131,82 @@ class MealCheckinTests(TestCase):
         deleted = self.client.post(reverse('meal_checkin_delete', args=[checkin.pk]))
         self.assertEqual(deleted.status_code, 302)
         self.assertFalse(MealCheckin.objects.filter(pk=checkin.pk).exists())
+
+
+class ErpIsomerixPushTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user('erpuser', 'e@t.t', 'x')
+        self.cat = Category.objects.create(name='ErpCat')
+        self.product = Product.objects.create(
+            name='GuruchERP', category=self.cat, unit=Unit.KG
+        )
+        self.supplier = Supplier.objects.create(name='Yetkazuvchi')
+
+    @override_settings(ERP_ISOMERIX_WEBHOOK_URL='', ERP_ISOMERIX_BEARER_TOKEN='')
+    def test_receive_stock_noop_without_config(self):
+        movement = receive_stock(
+            product=self.product,
+            quantity=Decimal('5'),
+            unit_cost=Decimal('10000'),
+            user=self.user,
+        )
+        self.assertEqual(movement.quantity, Decimal('5.000'))
+
+    @override_settings(
+        ERP_ISOMERIX_WEBHOOK_URL='https://erp.example/webhook/',
+        ERP_ISOMERIX_BEARER_TOKEN='secret-token',
+    )
+    def test_receive_stock_posts_payload(self):
+        from unittest.mock import patch
+
+        from kitchen.services import erp_isomerix
+
+        with patch.object(erp_isomerix, '_post_json') as mock_post:
+            with self.captureOnCommitCallbacks(execute=True):
+                movement = receive_stock(
+                    product=self.product,
+                    quantity=Decimal('12.5'),
+                    unit_cost=Decimal('18000'),
+                    user=self.user,
+                    supplier=self.supplier,
+                    note='Test prixod',
+                )
+            self.assertTrue(mock_post.called)
+            body = mock_post.call_args[0][0]
+            self.assertEqual(body['source'], 'chefpro')
+            self.assertEqual(body['event'], 'receipt.created')
+            payload = body['payload']
+            self.assertEqual(payload['external_id'], f'chefpro-sm-{movement.pk}')
+            self.assertEqual(payload['item_name'], 'GuruchERP')
+            self.assertEqual(payload['quantity'], '12.500')
+            self.assertEqual(payload['unit'], 'kg')
+            self.assertEqual(payload['unit_price'], '18000.00')
+            self.assertEqual(payload['supplier_name'], 'Yetkazuvchi')
+
+    @override_settings(
+        ERP_ISOMERIX_WEBHOOK_URL='https://erp.example/webhook/',
+        ERP_ISOMERIX_BEARER_TOKEN='secret-token',
+    )
+    def test_update_receipt_posts_updated_event(self):
+        from unittest.mock import patch
+
+        from kitchen.services import erp_isomerix
+
+        with patch.object(erp_isomerix, '_post_json'):
+            with self.captureOnCommitCallbacks(execute=True):
+                movement = receive_stock(
+                    product=self.product,
+                    quantity=Decimal('10'),
+                    unit_cost=Decimal('5000'),
+                    user=self.user,
+                )
+        with patch.object(erp_isomerix, '_post_json') as mock_post:
+            with self.captureOnCommitCallbacks(execute=True):
+                update_receipt(
+                    movement=movement,
+                    quantity=Decimal('11'),
+                    unit_cost=Decimal('5500'),
+                    user=self.user,
+                )
+            self.assertTrue(mock_post.called)
+            self.assertEqual(mock_post.call_args[0][0]['event'], 'receipt.updated')
