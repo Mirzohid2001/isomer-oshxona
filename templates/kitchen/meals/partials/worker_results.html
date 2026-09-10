@@ -1,7 +1,7 @@
 {% if workers %}
 <div class="checkin-worker-list">
   {% for w in workers %}
-  <button class="checkin-worker" type="button" data-worker-id="{{ w.pk }}">
+  <button class="checkin-worker" type="button" data-worker-id="{{ w.pk }}" data-worker-name="{{ w.full_name }}">
     <span class="checkin-worker-avatar">{{ w.last_name|slice:":1" }}{{ w.first_name|slice:":1" }}</span>
     <span class="checkin-worker-meta">
       <strong>{{ w.full_name }}</strong>

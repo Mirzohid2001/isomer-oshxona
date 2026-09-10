@@ -110,6 +110,8 @@
     const workerId = document.getElementById('worker_id');
     const submitBtn = document.getElementById('checkin-submit');
     const results = document.getElementById('worker-results');
+    const searchInput = document.getElementById('worker-search');
+    let lockSearch = false;
 
     function syncSubmit() {
       submitBtn.disabled = !workerId.value;
@@ -119,14 +121,32 @@
       const btn = e.target.closest('[data-worker-id]');
       if (!btn) return;
       workerId.value = btn.getAttribute('data-worker-id');
+      const name = btn.getAttribute('data-worker-name') || '';
+      if (searchInput && name) {
+        lockSearch = true;
+        searchInput.value = name;
+        // HTMX qayta qidiruvni ishga tushirmasligi uchun qisqa blok
+        setTimeout(function () { lockSearch = false; }, 400);
+      }
       results.querySelectorAll('.checkin-worker').forEach(function (el) {
         el.classList.toggle('is-selected', el === btn);
       });
       syncSubmit();
     });
 
+    if (searchInput) {
+      searchInput.addEventListener('htmx:configRequest', function (e) {
+        if (lockSearch) e.preventDefault();
+      });
+      searchInput.addEventListener('input', function () {
+        if (lockSearch) return;
+        workerId.value = '';
+        syncSubmit();
+      });
+    }
+
     document.body.addEventListener('htmx:afterSwap', function (e) {
-      if (e.target.id === 'worker-results') {
+      if (e.target.id === 'worker-results' && !lockSearch) {
         workerId.value = '';
         syncSubmit();
       }
