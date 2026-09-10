@@ -141,7 +141,9 @@ def schedule_push_receipt(movement_id: int, event: str = 'created') -> None:
                 .get(pk=movement_id)
             )
         except StockMovement.DoesNotExist:
+            logger.warning('ERP push skipped: movement %s not found', movement_id)
             return
+        logger.info('ERP kitchen push start movement=%s event=%s', movement_id, event)
         push_receipt(movement, event=event)
 
     if connection.in_atomic_block:

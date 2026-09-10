@@ -187,6 +187,7 @@ def _allocate_from_lots(*, product, quantity, movement, location=None):
 
 
 @transaction.atomic
+@transaction.atomic
 def receive_stock(
     *,
     product,
