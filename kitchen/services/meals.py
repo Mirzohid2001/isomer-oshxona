@@ -10,13 +10,13 @@ from kitchen.models import CookBatch, MealCheckin, MealType, Worker
 from kitchen.utils import local_month_bounds
 
 
-MEAL_ORDER = (MealType.BREAKFAST, MealType.LUNCH, MealType.AFTERNOON, MealType.DINNER)
+MEAL_ORDER = (MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.NIGHT)
 MEAL_LABELS = dict(MealCheckin.MEAL_CHOICES)
 MEAL_HINTS = {
     MealType.BREAKFAST: 'Ertalab',
     MealType.LUNCH: 'Tush payti',
-    MealType.AFTERNOON: 'Kunduz',
     MealType.DINNER: 'Kechqurun',
+    MealType.NIGHT: 'Tun',
 }
 
 
@@ -25,11 +25,11 @@ def suggest_meal_type(now=None):
     hour = now.hour
     if hour < 10:
         return MealType.BREAKFAST
-    if hour < 14:
+    if hour < 15:
         return MealType.LUNCH
-    if hour < 17:
-        return MealType.AFTERNOON
-    return MealType.DINNER
+    if hour < 20:
+        return MealType.DINNER
+    return MealType.NIGHT
 
 
 def search_workers(query, limit=20):
@@ -232,8 +232,8 @@ def build_meal_report(year, month):
                 'employee_code': bucket['employee_code'],
                 'breakfast': bucket['meals'][MealType.BREAKFAST],
                 'lunch': bucket['meals'][MealType.LUNCH],
-                'afternoon': bucket['meals'][MealType.AFTERNOON],
                 'dinner': bucket['meals'][MealType.DINNER],
+                'night': bucket['meals'][MealType.NIGHT],
                 'total': bucket['total'],
                 'days_count': len(bucket['days']),
             }
