@@ -16,7 +16,7 @@ from kitchen.models import (
     StockLot,
 )
 from kitchen.services.approvals import receive_purchase_order, review_change_request
-from kitchen.services.cook import queue_cook, start_queued_cook
+from kitchen.services.cook import queue_cooks, start_queued_cook
 from kitchen.services.stock import StockError
 from kitchen.utils import local_day_bounds, paginate
 
@@ -110,18 +110,22 @@ def kds_queue(request):
     form = CookForm(request.POST)
     if form.is_valid():
         try:
-            batch = queue_cook(
-                recipe=form.cleaned_data['recipe'],
+            batches = queue_cooks(
+                recipes=form.cleaned_data['all_recipes'],
                 portions=form.cleaned_data['portions'],
                 user=request.user,
                 note=form.cleaned_data.get('note') or '',
                 cooked_at=form.cleaned_data.get('cooked_on'),
             )
-            messages.success(request, f'Navbatga qo‘yildi va ombor rezerv qilindi: {batch.recipe.name}')
+            names = ', '.join(b.recipe.name for b in batches)
+            messages.success(
+                request,
+                f'Navbatga qo‘yildi va ombor rezerv qilindi: {names}',
+            )
         except StockError as exc:
             messages.error(request, str(exc))
     else:
-            messages.error(request, form.errors.as_text() or 'Forma xato.')
+        messages.error(request, form.errors.as_text() or 'Forma xato.')
     return redirect('kds_board')
 
 

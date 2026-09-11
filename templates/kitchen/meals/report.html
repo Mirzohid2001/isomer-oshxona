@@ -45,17 +45,102 @@
     <div class="stat-value">{{ report.unique_workers|intcomma }}</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Pishirilgan</div>
+    <div class="stat-label">Asosiy ovqat (sverka)</div>
     <div class="stat-value">{{ report.totals.cooked|intcomma }}</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Farq (pish − yey)</div>
+    <div class="stat-label">Qo‘shimchalar</div>
+    <div class="stat-value">{{ report.side_total|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Farq (asosiy − yey)</div>
     <div class="stat-value">{{ report.totals.diff|intcomma }}</div>
   </div>
 </div>
 
 <div class="panel panel-spaced-top">
-  <div class="panel-head"><h3>Mahal bo‘yicha jami</h3></div>
+  <div class="panel-head">
+    <h3>Asosiy ovqat — retsept bo‘yicha</h3>
+    <span class="muted-note">Faqat sverkaga kiradiganlar (salat/kefir emas)</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Retsept</th><th>Porsiya</th></tr></thead>
+      <tbody>
+        {% for row in report.main_recipe_rows %}
+        <tr>
+          <td><strong>{{ row.recipe }}</strong></td>
+          <td>{{ row.portions|intcomma }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" class="empty">Asosiy ovqat pishirilmagan</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if report.main_detail_rows %}
+  <div class="panel-head panel-head-sub"><h4>Batafsil (har bir pishirish)</h4></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Sana</th><th>Mahal</th><th>Retsept</th><th>Porsiya</th></tr></thead>
+      <tbody>
+        {% for row in report.main_detail_rows %}
+        <tr>
+          <td>{{ row.date|date:"d.m.Y" }}</td>
+          <td>{{ row.meal_label }}</td>
+          <td>{{ row.recipe }}</td>
+          <td>{{ row.portions|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head">
+    <h3>Qo‘shimchalar hisoboti</h3>
+    <span class="muted-note">Salat, kefir, kompot — ombor rasxod, sverkaga kirmaydi · jami {{ report.side_total|intcomma }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Retsept</th><th>Porsiya</th></tr></thead>
+      <tbody>
+        {% for row in report.side_recipe_rows %}
+        <tr>
+          <td><strong>{{ row.recipe }}</strong></td>
+          <td>{{ row.portions|intcomma }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" class="empty">Bu oyda qo‘shimcha pishirilmagan</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if report.side_detail_rows %}
+  <div class="panel-head panel-head-sub"><h4>Batafsil</h4></div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Sana</th><th>Mahal</th><th>Retsept</th><th>Kategoriya</th><th>Porsiya</th></tr></thead>
+      <tbody>
+        {% for row in report.side_detail_rows %}
+        <tr>
+          <td>{{ row.date|date:"d.m.Y" }}</td>
+          <td>{{ row.meal_label }}</td>
+          <td>{{ row.recipe }}</td>
+          <td>{{ row.category }}</td>
+          <td>{{ row.portions|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head"><h3>Mahal bo‘yicha jami (asosiy ovqat)</h3></div>
   <div class="table-wrap">
     <table class="data">
       <thead><tr><th>Mahal</th><th>Pishirilgan</th><th>Yeyilgan</th><th>Farq</th></tr></thead>
@@ -91,8 +176,8 @@
 
 <div class="panel panel-spaced-top">
   <div class="panel-head">
-    <h3>Kunlik sverka</h3>
-    <span class="muted-note">Faqat pishirish yoki QR bo‘lgan kunlar</span>
+    <h3>Kunlik sverka (asosiy ovqat)</h3>
+    <span class="muted-note">Qo‘shimchalar bu yerga kirmaydi</span>
   </div>
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">

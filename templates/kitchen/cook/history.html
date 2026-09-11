@@ -16,7 +16,12 @@
         {% for b in batches %}
         <tr>
           <td>{{ b.cooked_at|date:"d.m.Y H:i" }}</td>
-          <td><a href="{% url 'cook_detail' b.pk %}"><strong>{{ b.recipe.name }}</strong></a></td>
+          <td>
+            <a href="{% url 'cook_detail' b.pk %}"><strong>{{ b.recipe.name }}</strong></a>
+            {% if b.recipe.category and not b.recipe.counts_in_meal_sverka %}
+            <span class="badge badge-warn">Qo‘shimcha</span>
+            {% endif %}
+          </td>
           <td>{{ b.portions }}</td>
           <td>{{ b.total_cost|floatformat:0|intcomma }}</td>
           <td>{{ b.cost_per_portion|floatformat:0|intcomma }}</td>

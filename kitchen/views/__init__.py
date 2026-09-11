@@ -56,6 +56,10 @@ from kitchen.views.planning import (
     shopping_print,
 )
 from kitchen.views.recipes import (
+    recipe_category_create,
+    recipe_category_delete,
+    recipe_category_edit,
+    recipe_category_list,
     recipe_create,
     recipe_detail,
     recipe_edit,
@@ -137,6 +141,10 @@ __all__ = [
     'recipe_pdf_view',
     'recipe_create',
     'recipe_edit',
+    'recipe_category_list',
+    'recipe_category_create',
+    'recipe_category_edit',
+    'recipe_category_delete',
     'cook_create',
     'cook_preview_htmx',
     'cook_history',

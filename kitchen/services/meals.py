@@ -106,21 +106,64 @@ def build_meal_report(year, month):
     )
 
     cooked_by_day_meal = defaultdict(int)
-    batches = (
+    main_by_recipe = defaultdict(int)
+    main_detail_rows = []
+    side_by_recipe = defaultdict(int)
+    side_detail_rows = []
+
+    all_batches = (
         CookBatch.objects.filter(
             status=CookBatch.Status.DONE,
             cooked_at__gte=start_dt,
             cooked_at__lt=end_dt,
         )
-        .select_related('recipe')
-        .only('portions', 'cooked_at', 'recipe__meal_type')
+        .select_related('recipe', 'recipe__category')
+        .only(
+            'portions',
+            'cooked_at',
+            'recipe__name',
+            'recipe__meal_type',
+            'recipe__category_id',
+            'recipe__category__name',
+            'recipe__category__include_in_meal_sverka',
+        )
+        .order_by('cooked_at', 'id')
     )
-    for batch in batches:
+    for batch in all_batches:
         day = timezone.localtime(batch.cooked_at).date()
         meal = batch.recipe.meal_type
-        if meal not in MEAL_LABELS:
-            continue
-        cooked_by_day_meal[(day, meal)] += int(batch.portions)
+        portions = int(batch.portions)
+        is_main = (
+            batch.recipe.category_id is None
+            or batch.recipe.category.include_in_meal_sverka
+        )
+        row = {
+            'date': day,
+            'cooked_at': batch.cooked_at,
+            'meal_type': meal,
+            'meal_label': MEAL_LABELS.get(meal, meal),
+            'recipe': batch.recipe.name,
+            'category': batch.recipe.category.name if batch.recipe.category_id else '—',
+            'portions': portions,
+        }
+        if is_main:
+            if meal in MEAL_LABELS:
+                cooked_by_day_meal[(day, meal)] += portions
+            main_by_recipe[batch.recipe.name] += portions
+            main_detail_rows.append(row)
+        else:
+            side_by_recipe[batch.recipe.name] += portions
+            side_detail_rows.append(row)
+
+    main_recipe_rows = [
+        {'recipe': name, 'portions': qty}
+        for name, qty in sorted(main_by_recipe.items(), key=lambda x: (-x[1], x[0]))
+    ]
+    side_recipe_rows = [
+        {'recipe': name, 'portions': qty}
+        for name, qty in sorted(side_by_recipe.items(), key=lambda x: (-x[1], x[0]))
+    ]
+    side_total = sum(side_by_recipe.values())
 
     eaten_by_day_meal = defaultdict(int)
     for row in checkins:
@@ -221,6 +264,11 @@ def build_meal_report(year, month):
         'worker_rows': worker_rows,
         'journal': journal,
         'totals': totals,
+        'main_recipe_rows': main_recipe_rows,
+        'main_detail_rows': main_detail_rows,
+        'side_recipe_rows': side_recipe_rows,
+        'side_detail_rows': side_detail_rows,
+        'side_total': side_total,
         'unique_workers': len(worker_rows),
         'checkin_count': len(checkins),
         'portion_total': portion_total,

@@ -128,3 +128,110 @@ def recipe_nutrition(recipe, portions=1, *, products=None):
 def recipe_cost_snapshot(recipe_id, portions=1):
     recipe = Recipe.objects.prefetch_related('items__product').get(pk=recipe_id)
     return recipe_nutrition(recipe, portions)
+
+
+def recipes_nutrition(recipes, portions=1):
+    """Bir nechta retsept (asosiy + qo‘shimcha) uchun birlashtirilgan preview."""
+    recipes = [r for r in recipes if r is not None]
+    if not recipes:
+        return _empty(None)
+    if len(recipes) == 1:
+        preview = recipe_nutrition(recipes[0], portions)
+        preview['recipe_names'] = [recipes[0].name]
+        return preview
+
+    try:
+        portions_dec = as_decimal(portions)
+    except (InvalidOperation, TypeError, ValueError):
+        return _empty(recipes[0])
+    if portions_dec < 1 or portions_dec != portions_dec.to_integral_value():
+        return _empty(recipes[0])
+    portions_int = int(portions_dec)
+
+    need_by_pid = {}
+    product_by_pid = {}
+    allergen_set = set()
+    for recipe in recipes:
+        if recipe.allergens:
+            allergen_set.update(a.strip() for a in recipe.allergens.split(',') if a.strip())
+        base = Decimal(recipe.base_portions or 1) or Decimal('1')
+        scale = Decimal(portions_int) / base
+        for item in recipe.items.select_related('product'):
+            pid = item.product_id
+            product_by_pid[pid] = item.product
+            need_by_pid[pid] = need_by_pid.get(pid, Decimal('0')) + as_decimal(item.quantity_per_portion) * scale
+            if item.product.allergens:
+                allergen_set.update(
+                    a.strip() for a in item.product.allergens.split(',') if a.strip()
+                )
+
+    items = []
+    shortages = []
+    total_cost_exact = Decimal('0')
+    total_kcal_exact = Decimal('0')
+    total_protein_exact = Decimal('0')
+    total_fat_exact = Decimal('0')
+    total_carbs_exact = Decimal('0')
+
+    for pid in sorted(need_by_pid.keys()):
+        product = product_by_pid[pid]
+        need = qty(need_by_pid[pid])
+        allocation = preview_fefo_allocation(product, need)
+        line_cost_exact = as_decimal(allocation['total_cost'])
+        have = qty(product.quantity)
+        enough = have >= need
+        if not enough:
+            shortages.append(
+                {
+                    'product': product,
+                    'need': need,
+                    'have': have,
+                    'missing': qty(need - have),
+                }
+            )
+        items.append(
+            {
+                'product': product,
+                'need': need,
+                'have': have,
+                'unit_cost': money(allocation['avg_unit_cost']),
+                'line_cost': money(line_cost_exact),
+                'line_kcal': nutri(need * as_decimal(product.kcal_per_unit)),
+                'enough': enough,
+                'allocations': allocation['lines'],
+                'mixed_cost': allocation['mixed'],
+            }
+        )
+        total_cost_exact += line_cost_exact
+        total_kcal_exact += need * as_decimal(product.kcal_per_unit)
+        total_protein_exact += need * as_decimal(product.protein)
+        total_fat_exact += need * as_decimal(product.fat)
+        total_carbs_exact += need * as_decimal(product.carbs)
+
+    if items:
+        rounded_sum = sum((row['line_cost'] for row in items), money(0))
+        exact_total = money(total_cost_exact)
+        drift = exact_total - rounded_sum
+        if drift != 0:
+            items[-1]['line_cost'] = money(items[-1]['line_cost'] + drift)
+        total_cost = exact_total
+    else:
+        total_cost = money(0)
+
+    portions_dec = Decimal(portions_int)
+    return {
+        'recipe': recipes[0],
+        'recipe_names': [r.name for r in recipes],
+        'portions': portions_int,
+        'items': items,
+        'shortages': shortages,
+        'can_cook': len(shortages) == 0 and len(items) > 0,
+        'total_cost': total_cost,
+        'cost_per_portion': money_div(total_cost, portions_dec),
+        'total_kcal': nutri(total_kcal_exact),
+        'kcal_per_portion': nutri_div(total_kcal_exact, portions_dec),
+        'protein_per_portion': nutri_div(total_protein_exact, portions_dec),
+        'fat_per_portion': nutri_div(total_fat_exact, portions_dec),
+        'carbs_per_portion': nutri_div(total_carbs_exact, portions_dec),
+        'allergens': sorted(allergen_set),
+    }

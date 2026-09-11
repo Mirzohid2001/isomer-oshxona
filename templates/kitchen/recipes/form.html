@@ -18,6 +18,7 @@
         <div class="form-field {% if field.name == 'description' or field.name == 'allergens' or field.name == 'is_active' %}full{% endif %}">
           <label>{{ field.label }}</label>
           {{ field }}
+          {% if field.help_text %}<p class="muted-note">{{ field.help_text }}</p>{% endif %}
           {% include "kitchen/partials/field_errors.html" %}
         </div>
         {% endfor %}
@@ -49,7 +50,7 @@
           <td data-label="O‘chirish">{% if formset.empty_form.DELETE %}{{ formset.empty_form.DELETE }}{% endif %}</td>
         </tr>
       </template>
-      <p class="muted-note formset-hint">3 tadan ko‘p kerak bo‘lsa — «+ Yana mahsulot» ni bosing (50 tagacha).</p>
+      <p class="muted-note formset-hint">Yana kerak bo‘lsa — «+ Yana mahsulot» ni bosing (50 tagacha). Bo‘sh qatorlarni to‘ldirish shart emas.</p>
       <div class="form-actions">
         <button class="btn" type="submit">Saqlash</button>
         <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Orqaga</a>

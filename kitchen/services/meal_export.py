@@ -41,7 +41,7 @@ def _autosize(ws, col_count, min_w=10, max_w=36):
 
 
 def meal_report_excel(report):
-    """3 varaq: Sverka, Ishchilar, Jurnal."""
+    """Varaqlar: Sverka, Asosiy ovqat, Qo‘shimchalar, Ishchilar, Jurnal."""
     wb = Workbook()
     year, month = report['year'], report['month']
     subtitle = f'{month:02d}.{year} · {report["start"].strftime("%d.%m.%Y")} — {report["end"].strftime("%d.%m.%Y")}'
@@ -108,7 +108,77 @@ def meal_report_excel(report):
         ws.cell(row=r, column=4, value=m['eaten']).font = BODY_FONT
         ws.cell(row=r, column=5, value=m['diff']).font = BODY_FONT
         r += 1
+    ws.cell(row=r, column=1, value='Eslatma: pishirilgan — faqat asosiy ovqat (qo‘shimchalar alohida varaqda)').font = META_FONT
     _autosize(ws, len(headers))
+
+    # --- Sheet: Asosiy retseptlar ---
+    ws_main = wb.create_sheet('Asosiy ovqat')
+    ws_main['A1'] = 'Asosiy ovqat (sverkaga kiradi)'
+    ws_main['A1'].font = TITLE_FONT
+    ws_main.merge_cells('A1:D1')
+    ws_main['A2'] = subtitle
+    ws_main['A2'].font = SUB_FONT
+    headers_main = ['Sana', 'Mahal', 'Retsept', 'Porsiya']
+    for i, h in enumerate(headers_main, 1):
+        ws_main.cell(row=4, column=i, value=h)
+    _style_header_row(ws_main, 4, len(headers_main))
+    r = 5
+    for row in report.get('main_detail_rows', []):
+        values = [
+            row['date'].strftime('%d.%m.%Y'),
+            row['meal_label'],
+            row['recipe'],
+            row['portions'],
+        ]
+        for c, val in enumerate(values, 1):
+            cell = ws_main.cell(row=r, column=c, value=val)
+            cell.font = BODY_FONT
+            cell.border = BORDER
+            if r % 2 == 0:
+                cell.fill = ALT_FILL
+        r += 1
+    for c, val in enumerate(['JAMI', '', '', report['totals']['cooked']], 1):
+        cell = ws_main.cell(row=r, column=c, value=val)
+        cell.font = TOTAL_FONT
+        cell.fill = TOTAL_FILL
+        cell.border = BORDER
+    _autosize(ws_main, len(headers_main))
+
+    # --- Sheet: Qo‘shimchalar ---
+    ws_side = wb.create_sheet('Qoshimchalar')
+    ws_side['A1'] = 'Qo‘shimchalar (salat, kefir, kompot — sverkaga kirmaydi)'
+    ws_side['A1'].font = TITLE_FONT
+    ws_side.merge_cells('A1:E1')
+    ws_side['A2'] = subtitle
+    ws_side['A2'].font = SUB_FONT
+    ws_side['A3'] = f'Jami porsiya: {report.get("side_total", 0)}'
+    ws_side['A3'].font = META_FONT
+    headers_side = ['Sana', 'Mahal', 'Retsept', 'Kategoriya', 'Porsiya']
+    for i, h in enumerate(headers_side, 1):
+        ws_side.cell(row=5, column=i, value=h)
+    _style_header_row(ws_side, 5, len(headers_side))
+    r = 6
+    for row in report.get('side_detail_rows', []):
+        values = [
+            row['date'].strftime('%d.%m.%Y'),
+            row['meal_label'],
+            row['recipe'],
+            row['category'],
+            row['portions'],
+        ]
+        for c, val in enumerate(values, 1):
+            cell = ws_side.cell(row=r, column=c, value=val)
+            cell.font = BODY_FONT
+            cell.border = BORDER
+            if r % 2 == 0:
+                cell.fill = ALT_FILL
+        r += 1
+    for c, val in enumerate(['JAMI', '', '', '', report.get('side_total', 0)], 1):
+        cell = ws_side.cell(row=r, column=c, value=val)
+        cell.font = TOTAL_FONT
+        cell.fill = TOTAL_FILL
+        cell.border = BORDER
+    _autosize(ws_side, len(headers_side))
 
     # --- Sheet 2: Ishchilar ---
     ws2 = wb.create_sheet('Ishchilar')

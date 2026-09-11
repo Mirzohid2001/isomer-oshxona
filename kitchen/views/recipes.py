@@ -1,9 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
-from kitchen.forms import RecipeForm, RecipeItemFormSet
-from kitchen.models import CookBatch, Recipe
+from kitchen.forms import RecipeCategoryForm, RecipeForm, RecipeItemFormSet
+from kitchen.models import CookBatch, Recipe, RecipeCategory
 from kitchen.services import recipe_nutrition
 from kitchen.services.pdf import recipe_pdf
 from kitchen.utils import paginate, parse_portions
@@ -12,14 +14,19 @@ from kitchen.utils import paginate, parse_portions
 @login_required
 def recipe_list(request):
     q = request.GET.get('q', '').strip()
-    recipes = Recipe.objects.filter(is_active=True).order_by('name')
+    category_id = request.GET.get('category', '').strip()
+    recipes = Recipe.objects.filter(is_active=True).select_related('category').order_by('name')
     if q:
         recipes = recipes.filter(name__icontains=q)
+    if category_id.isdigit():
+        recipes = recipes.filter(category_id=int(category_id))
     page_obj, querystring = paginate(request, recipes, per_page=12)
     pks = [r.pk for r in page_obj]
     recipes_map = {
         r.pk: r
-        for r in Recipe.objects.filter(pk__in=pks).prefetch_related('items__product')
+        for r in Recipe.objects.filter(pk__in=pks)
+        .select_related('category')
+        .prefetch_related('items__product')
     }
     cards = []
     for pk in pks:
@@ -33,13 +40,86 @@ def recipe_list(request):
             'cards': cards,
             'querystring': querystring,
             'q': q,
+            'category_id': category_id,
+            'categories': RecipeCategory.objects.annotate(
+                recipe_count=Count('recipes', filter=Q(recipes__is_active=True))
+            ),
         },
     )
 
 
 @login_required
+def recipe_category_list(request):
+    q = request.GET.get('q', '').strip()
+    categories = RecipeCategory.objects.annotate(recipe_count=Count('recipes'))
+    if q:
+        categories = categories.filter(name__icontains=q)
+    return render(
+        request,
+        'kitchen/recipe_categories/list.html',
+        {'categories': categories, 'q': q},
+    )
+
+
+@login_required
+def recipe_category_create(request):
+    form = RecipeCategoryForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        cat = form.save()
+        messages.success(request, f'Retsept kategoriyasi qo‘shildi: {cat.name}')
+        return redirect('recipe_category_list')
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {
+            'form': form,
+            'title': 'Yangi retsept kategoriyasi',
+            'cancel_url': reverse('recipe_category_list'),
+        },
+    )
+
+
+@login_required
+def recipe_category_edit(request, pk):
+    category = get_object_or_404(RecipeCategory, pk=pk)
+    form = RecipeCategoryForm(request.POST or None, instance=category)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Retsept kategoriyasi yangilandi.')
+        return redirect('recipe_category_list')
+    return render(
+        request,
+        'kitchen/form_page.html',
+        {
+            'form': form,
+            'title': f'Tahrir: {category.name}',
+            'cancel_url': reverse('recipe_category_list'),
+        },
+    )
+
+
+@login_required
+def recipe_category_delete(request, pk):
+    category = get_object_or_404(RecipeCategory, pk=pk)
+    count = category.recipes.count()
+    if count:
+        messages.error(
+            request,
+            f'«{category.name}» o‘chirib bo‘lmaydi — {count} ta retsept bog‘langan.',
+        )
+        return redirect('recipe_category_list')
+    name = category.name
+    category.delete()
+    messages.success(request, f'O‘chirildi: {name}')
+    return redirect('recipe_category_list')
+
+
+@login_required
 def recipe_detail(request, pk):
-    recipe = get_object_or_404(Recipe.objects.prefetch_related('items__product'), pk=pk)
+    recipe = get_object_or_404(
+        Recipe.objects.select_related('category').prefetch_related('items__product'),
+        pk=pk,
+    )
     portions = parse_portions(request.GET.get('portions'), recipe.base_portions or 1)
     info = recipe_nutrition(recipe, portions)
     if request.headers.get('HX-Request'):

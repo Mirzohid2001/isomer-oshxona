@@ -32,12 +32,13 @@
       <div class="nav-label">Asosiy</div>
       <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}" @click="navOpen = false">Bosh sahifa</a>
       <a class="nav-link {% if 'product' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'product_list' %}" @click="navOpen = false">Mahsulotlar</a>
-      <a class="nav-link {% if 'categor' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'category_list' %}" @click="navOpen = false">Kategoriyalar</a>
+      <a class="nav-link {% if request.resolver_match.url_name == 'category_list' or request.resolver_match.url_name == 'category_create' or request.resolver_match.url_name == 'category_edit' %}is-active{% endif %}" href="{% url 'category_list' %}" @click="navOpen = false">Kategoriyalar</a>
       <a class="nav-link {% if 'stock' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'stock_list' %}" @click="navOpen = false">Ombor{% if nav_low_stock %}<span class="nav-badge">{{ nav_low_stock }}</span>{% endif %}</a>
       <a class="nav-link {% if 'receipt' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'receipt_list' %}" @click="navOpen = false">Prixodlar</a>
       <a class="nav-link {% if 'supplier' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'supplier_list' %}" @click="navOpen = false">Yetkazuvchilar</a>
       <div class="nav-label">Ovqat</div>
-      <a class="nav-link {% if 'recipe' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'recipe_list' %}" @click="navOpen = false">Retseptlar</a>
+      <a class="nav-link {% if 'recipe' in request.resolver_match.url_name and 'category' not in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'recipe_list' %}" @click="navOpen = false">Retseptlar</a>
+      <a class="nav-link {% if 'recipe_category' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'recipe_category_list' %}" @click="navOpen = false">Retsept turlari</a>
       <a class="nav-link {% if request.resolver_match.url_name == 'cook_create' %}is-active{% endif %}" href="{% url 'cook_create' %}" @click="navOpen = false">Pishirish</a>
       <a class="nav-link {% if 'cook' in request.resolver_match.url_name and request.resolver_match.url_name != 'cook_create' %}is-active{% endif %}" href="{% url 'cook_history' %}" @click="navOpen = false">Pishirish tarixi</a>
       <a class="nav-link {% if 'menu' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'menu_day' %}" @click="navOpen = false">Kunlik menyu</a>

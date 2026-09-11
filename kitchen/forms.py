@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from kitchen.models import (
     Category,
+    RecipeCategory,
     DailyHeadcount,
     DailyMenu,
     DailyMenuItem,
@@ -47,6 +48,24 @@ class CategoryForm(StyledFormMixin, forms.ModelForm):
         if not name:
             raise forms.ValidationError('Nom bo‘sh bo‘lmasin.')
         qs = Category.objects.filter(name__iexact=name)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        existing = qs.first()
+        if existing:
+            raise forms.ValidationError(f'Bunday kategoriya allaqachon bor: {existing.name}')
+        return name
+
+
+class RecipeCategoryForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = RecipeCategory
+        fields = ['name', 'include_in_meal_sverka']
+
+    def clean_name(self):
+        name = (self.cleaned_data.get('name') or '').strip()
+        if not name:
+            raise forms.ValidationError('Nom bo‘sh bo‘lmasin.')
+        qs = RecipeCategory.objects.filter(name__iexact=name)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         existing = qs.first()
@@ -143,7 +162,24 @@ class WasteForm(StyledFormMixin, forms.Form):
 class RecipeForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Recipe
-        fields = ['name', 'description', 'meal_type', 'base_portions', 'allergens', 'is_active']
+        fields = [
+            'name',
+            'description',
+            'category',
+            'meal_type',
+            'base_portions',
+            'allergens',
+            'is_active',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = RecipeCategory.objects.all()
+        self.fields['category'].required = True
+        if not self.instance.pk and not self.initial.get('category'):
+            main = RecipeCategory.objects.filter(include_in_meal_sverka=True).order_by('id').first()
+            if main:
+                self.fields['category'].initial = main.pk
 
 
 class RecipeItemForm(StyledFormMixin, forms.ModelForm):
@@ -153,10 +189,26 @@ class RecipeItemForm(StyledFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Bo‘sh / o‘chirilgan qatorlar ham "required" xato bermasin.
+        self.fields['product'].required = False
+        self.fields['quantity_per_portion'].required = False
         self.fields['quantity_per_portion'].label = 'Miqdor / baza retsept'
         self.fields['quantity_per_portion'].help_text = (
             'Bu miqdor retseptdagi baza porsiya uchun yoziladi.'
         )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('DELETE'):
+            return cleaned
+        product = cleaned.get('product')
+        qty = cleaned.get('quantity_per_portion')
+        if product or qty is not None:
+            if not product:
+                self.add_error('product', 'Mahsulot tanlang.')
+            if qty is None:
+                self.add_error('quantity_per_portion', 'Miqdorni kiriting.')
+        return cleaned
 
 
 class BaseRecipeItemFormSet(forms.BaseInlineFormSet):
@@ -170,7 +222,7 @@ class BaseRecipeItemFormSet(forms.BaseInlineFormSet):
                 continue
             if form.cleaned_data.get('DELETE'):
                 continue
-            if form.cleaned_data.get('product') and form.cleaned_data.get('quantity_per_portion'):
+            if form.cleaned_data.get('product') and form.cleaned_data.get('quantity_per_portion') is not None:
                 count += 1
         if count < 1:
             raise forms.ValidationError('Kamida bitta ingredient kerak.')
@@ -181,7 +233,7 @@ RecipeItemFormSet = inlineformset_factory(
     RecipeItem,
     form=RecipeItemForm,
     formset=BaseRecipeItemFormSet,
-    extra=3,
+    extra=1,
     can_delete=True,
     min_num=0,
     validate_min=False,
@@ -190,7 +242,17 @@ RecipeItemFormSet = inlineformset_factory(
 
 
 class CookForm(StyledFormMixin, forms.Form):
-    recipe = forms.ModelChoiceField(queryset=Recipe.objects.filter(is_active=True), label='Ovqat')
+    recipe = forms.ModelChoiceField(
+        queryset=Recipe.objects.none(),
+        label='Ovqat',
+    )
+    sides = forms.ModelMultipleChoiceField(
+        queryset=Recipe.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label='Qo‘shimchalar',
+        help_text='Salat, kefir, kompot — bir xil porsiya bilan birga rasxod. Ovqat sverkasiga kirmaydi.',
+    )
     portions = forms.IntegerField(min_value=1, initial=50, label='Porsiya')
     cooked_on = forms.DateField(
         label='Sana',
@@ -200,11 +262,29 @@ class CookForm(StyledFormMixin, forms.Form):
     )
     note = forms.CharField(required=False, label='Izoh')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from kitchen.models import recipe_in_meal_sverka_q, recipe_side_q
+
+        active = Recipe.objects.filter(is_active=True).select_related('category').order_by('name')
+        self.fields['recipe'].queryset = active.filter(recipe_in_meal_sverka_q())
+        self.fields['sides'].queryset = active.filter(recipe_side_q())
+
     def clean_cooked_on(self):
         value = self.cleaned_data['cooked_on']
         if value > timezone.localdate():
             raise forms.ValidationError('Kelajak sanasini tanlab bo‘lmaydi.')
         return value
+
+    def clean(self):
+        cleaned = super().clean()
+        recipe = cleaned.get('recipe')
+        sides = list(cleaned.get('sides') or [])
+        if recipe:
+            sides = [s for s in sides if s.pk != recipe.pk]
+            cleaned['sides'] = sides
+        cleaned['all_recipes'] = ([recipe] if recipe else []) + sides
+        return cleaned
 
 
 class HygieneCheckForm(StyledFormMixin, forms.ModelForm):

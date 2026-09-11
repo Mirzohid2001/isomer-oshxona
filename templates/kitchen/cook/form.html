@@ -29,6 +29,19 @@
             {% include "kitchen/partials/field_errors.html" with field=form.cooked_on %}
           </div>
           <div class="form-field full">
+            <label>{{ form.sides.label }}</label>
+            {% if form.sides.field.queryset.exists %}
+            <div class="checkbox-stack" id="cook-sides">
+              {% for checkbox in form.sides %}
+              <label class="check-line">{{ checkbox.tag }} <span>{{ checkbox.choice_label }}</span></label>
+              {% endfor %}
+            </div>
+            {% if form.sides.help_text %}<p class="muted-note">{{ form.sides.help_text }}</p>{% endif %}
+            {% else %}
+            <p class="muted-note">Qo‘shimcha retsept yo‘q. Retsept turida «Qo‘shimcha» yarating (salat, kefir…).</p>
+            {% endif %}
+          </div>
+          <div class="form-field full">
             <label>{{ form.note.label }}</label>
             {{ form.note }}
           </div>
@@ -43,8 +56,8 @@
     <div class="panel-head"><h3>Live preview</h3></div>
     <div class="panel-body" id="cook-preview"
          hx-get="{% url 'cook_preview' %}"
-         hx-trigger="load, change from:#id_recipe, change from:#id_portions, keyup changed delay:200ms from:#id_portions"
-         hx-include="#id_recipe,#id_portions"
+         hx-trigger="load, change from:#id_recipe, change from:#id_portions, change from:#id_cooked_on, change from:#cook-sides, keyup changed delay:200ms from:#id_portions"
+         hx-include="#id_recipe,#id_portions,#id_cooked_on,#cook-sides"
          hx-swap="innerHTML">
       {% if preview %}
       {% include "kitchen/cook/partials/preview.html" %}

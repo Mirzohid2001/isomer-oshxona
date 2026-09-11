@@ -1,5 +1,8 @@
 {% load humanize %}
 {% if preview %}
+{% if preview.recipe_names %}
+<p class="text-note"><strong>{{ preview.recipe_names|join:", " }}</strong></p>
+{% endif %}
 <p class="text-note">
   <strong>{{ preview.portions }}</strong> porsiya = <strong>{{ preview.portions }}</strong> kishi uchun.
   Pastdagi kkal/BJU — <strong>1 porsiya</strong> hisobi. Tannarx — <strong>FEFO</strong> (partiya bo‘yicha).

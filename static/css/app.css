@@ -787,6 +787,14 @@ textarea {
   font-weight: 500;
 }
 
+.stat-sub {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .stat-value {
   position: relative;
   z-index: 1;
@@ -1957,6 +1965,18 @@ table.data tbody tr:last-child td {
   margin-top: 1rem;
 }
 
+.panel-head-sub {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.panel-head-sub h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .budget-meta {
   display: flex;
   justify-content: space-between;
@@ -2054,7 +2074,33 @@ table.data tbody tr:last-child td {
 }
 
 .btn-stack {
-  margin-top: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.checkbox-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-xs);
+}
+
+.check-line {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.check-line input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--brand);
 }
 
 .search-section h4 {

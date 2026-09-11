@@ -1,15 +1,22 @@
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from kitchen.forms import CookForm
-from kitchen.models import CookBatch, Recipe
-from kitchen.services import StockError, cancel_cook_batch, cook_recipe, recipe_nutrition
+from kitchen.models import CookBatch, Recipe, recipe_in_meal_sverka_q
+from kitchen.services import StockError, cancel_cook_batch, cook_recipes, recipes_nutrition
 from kitchen.services.pdf import cook_batch_pdf
 from kitchen.services.stock import allocation_rows_from_movement
 from kitchen.utils import paginate
 from kitchen.views.common import suggested_portions
+
+
+def _cook_preview_from_form(form):
+    recipes = form.cleaned_data.get('all_recipes') or [form.cleaned_data['recipe']]
+    return recipes_nutrition(recipes, form.cleaned_data['portions'])
 
 
 @login_required
@@ -20,34 +27,48 @@ def cook_create(request):
     preview = None
     if request.method == 'POST':
         if 'preview' in request.POST and form.is_valid():
-            preview = recipe_nutrition(form.cleaned_data['recipe'], form.cleaned_data['portions'])
+            preview = _cook_preview_from_form(form)
         elif 'confirm' in request.POST and form.is_valid():
             try:
-                batch = cook_recipe(
-                    recipe=form.cleaned_data['recipe'],
+                batches = cook_recipes(
+                    recipes=form.cleaned_data['all_recipes'],
                     portions=form.cleaned_data['portions'],
                     user=request.user,
                     note=form.cleaned_data['note'],
                     cooked_at=form.cleaned_data.get('cooked_on'),
                 )
-                messages.success(
-                    request,
-                    f'Pishirildi: {batch.recipe.name} × {batch.portions}. Tannarx: {batch.total_cost} so‘m',
-                )
-                return redirect('cook_detail', pk=batch.pk)
+                names = ', '.join(f'{b.recipe.name} × {b.portions}' for b in batches)
+                total = sum((b.total_cost for b in batches), Decimal('0'))
+                messages.success(request, f'Pishirildi: {names}. Jami: {total} so‘m')
+                return redirect('cook_detail', pk=batches[0].pk)
             except StockError as exc:
                 messages.error(request, str(exc))
-                preview = recipe_nutrition(
-                    form.cleaned_data['recipe'], form.cleaned_data['portions']
-                )
+                preview = _cook_preview_from_form(form)
     recipe_id = request.GET.get('recipe')
     if recipe_id and not request.POST:
         portions = request.GET.get('portions') or default_portions
-        form = CookForm(initial={'recipe': recipe_id, 'portions': portions})
+        initial = {'portions': portions}
         try:
-            recipe = Recipe.objects.get(pk=recipe_id)
-            preview = recipe_nutrition(recipe, int(portions))
+            recipe = Recipe.objects.select_related('category').get(pk=recipe_id)
+            if recipe.counts_in_meal_sverka:
+                initial['recipe'] = recipe.pk
+                form = CookForm(initial=initial)
+                preview = recipes_nutrition([recipe], int(portions))
+            else:
+                main = (
+                    Recipe.objects.filter(is_active=True)
+                    .filter(recipe_in_meal_sverka_q())
+                    .order_by('name')
+                    .first()
+                )
+                if main:
+                    initial['recipe'] = main.pk
+                initial['sides'] = [recipe.pk]
+                form = CookForm(initial=initial)
+                recipes = ([main] if main else []) + [recipe]
+                preview = recipes_nutrition(recipes, int(portions)) if recipes else None
         except (Recipe.DoesNotExist, ValueError, TypeError):
+            form = CookForm(initial={'portions': portions})
             preview = None
     return render(
         request,
@@ -61,13 +82,13 @@ def cook_preview_htmx(request):
     form = CookForm(request.GET or None)
     preview = None
     if form.is_valid():
-        preview = recipe_nutrition(form.cleaned_data['recipe'], form.cleaned_data['portions'])
+        preview = _cook_preview_from_form(form)
     return render(request, 'kitchen/cook/partials/preview.html', {'preview': preview, 'form': form})
 
 
 @login_required
 def cook_history(request):
-    batches = CookBatch.objects.select_related('recipe', 'created_by')
+    batches = CookBatch.objects.select_related('recipe', 'recipe__category', 'created_by')
     page_obj, querystring = paginate(request, batches, per_page=25)
     return render(
         request,

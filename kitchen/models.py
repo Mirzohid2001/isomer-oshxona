@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -309,9 +310,54 @@ class StockLotAllocation(models.Model):
         ordering = ['id']
 
 
+class RecipeCategory(models.Model):
+    """Retsept guruhlari: asosiy ovqat vs salat/kefir/kompot va boshqalar."""
+
+    name = models.CharField('Nomi', max_length=120)
+    include_in_meal_sverka = models.BooleanField(
+        'Ovqat sverkasiga kiradi',
+        default=True,
+        help_text=(
+            'Asosiy ovqat uchun yoqing. Salat, kefir, kompot kabi qo‘shimchalar '
+            'uchun o‘chiring — ombordan yechiladi, lekin QR porsiya sverkasiga qo‘shilmaydi.'
+        ),
+    )
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Retsept kategoriyasi'
+        verbose_name_plural = 'Retsept kategoriyalari'
+        constraints = [
+            models.UniqueConstraint(Lower('name'), name='kit_recipe_category_name_lower_uniq'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+def recipe_in_meal_sverka_q(prefix=''):
+    """CookBatch/Recipe: asosiy ovqat (sverkaga kiradigan) filter."""
+    p = f'{prefix}__' if prefix else ''
+    return Q(**{f'{p}category__isnull': True}) | Q(**{f'{p}category__include_in_meal_sverka': True})
+
+
+def recipe_side_q(prefix=''):
+    """CookBatch/Recipe: qo‘shimcha (sverkaga kirmaydigan) filter."""
+    p = f'{prefix}__' if prefix else ''
+    return Q(**{f'{p}category__include_in_meal_sverka': False})
+
+
 class Recipe(models.Model):
     name = models.CharField('Nomi', max_length=200)
     description = models.TextField('Tavsif', blank=True)
+    category = models.ForeignKey(
+        RecipeCategory,
+        on_delete=models.PROTECT,
+        related_name='recipes',
+        verbose_name='Kategoriya',
+        null=True,
+        blank=True,
+    )
     meal_type = models.CharField(
         'Ovqat turi',
         max_length=20,
@@ -330,6 +376,12 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def counts_in_meal_sverka(self):
+        if self.category_id is None:
+            return True
+        return bool(self.category.include_in_meal_sverka)
 
 
 class RecipeItem(models.Model):

@@ -17,6 +17,7 @@ from kitchen.models import (
     PurchaseOrder,
     PurchaseOrderLine,
     Recipe,
+    RecipeCategory,
     RecipeItem,
     StockChangeRequest,
     StockLot,
@@ -104,9 +105,17 @@ class HygieneCheckAdmin(admin.ModelAdmin):
     list_display = ['checked_at', 'check_type', 'location', 'is_ok', 'checked_by']
 
 
+@admin.register(RecipeCategory)
+class RecipeCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'include_in_meal_sverka']
+    list_filter = ['include_in_meal_sverka']
+    search_fields = ['name']
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'meal_type', 'base_portions', 'is_active']
+    list_display = ['name', 'category', 'meal_type', 'base_portions', 'is_active']
+    list_filter = ['category', 'meal_type', 'is_active']
     inlines = [RecipeItemInline]
 
 

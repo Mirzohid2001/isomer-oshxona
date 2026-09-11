@@ -6,7 +6,7 @@ from django.db.models import F, Q, Sum
 from django.shortcuts import render
 from django.utils import timezone
 
-from kitchen.models import CookBatch, DailyHeadcount, Product, Recipe, StockMovement
+from kitchen.models import CookBatch, DailyHeadcount, Product, Recipe, StockMovement, recipe_in_meal_sverka_q, recipe_side_q
 from kitchen.services import budget_status
 from kitchen.services.analytics import stock_snapshot
 from kitchen.utils import local_day_bounds
@@ -20,9 +20,15 @@ def dashboard(request):
         cooked_at__gte=day_start,
         cooked_at__lt=day_end,
         status=CookBatch.Status.DONE,
-    ).select_related('recipe')
+    ).select_related('recipe', 'recipe__category')
     today_cost = today_batches.aggregate(t=Sum('total_cost'))['t'] or Decimal('0')
-    today_portions = today_batches.aggregate(t=Sum('portions'))['t'] or 0
+    today_portions = (
+        today_batches.filter(recipe_in_meal_sverka_q('recipe')).aggregate(t=Sum('portions'))['t']
+        or 0
+    )
+    today_side_portions = (
+        today_batches.filter(recipe_side_q('recipe')).aggregate(t=Sum('portions'))['t'] or 0
+    )
     low_products = Product.objects.filter(is_active=True, quantity__lte=F('min_stock'))[:8]
     expiring = Product.objects.filter(
         is_active=True,
@@ -41,6 +47,7 @@ def dashboard(request):
             'today_batches': today_batches,
             'today_cost': today_cost,
             'today_portions': today_portions,
+            'today_side_portions': today_side_portions,
             'low_products': low_products,
             'expiring': expiring,
             'people': people,

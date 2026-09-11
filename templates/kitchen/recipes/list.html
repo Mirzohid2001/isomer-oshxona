@@ -5,8 +5,17 @@
 {% block page_subtitle %}Porsiya tannarxi, kaloriya va BJU{% endblock %}
 {% block content %}
 <div class="toolbar">
-  <a class="btn" href="{% url 'recipe_create' %}">Yangi retsept</a>
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'recipe_create' %}">Yangi retsept</a>
+    <a class="btn btn-ghost" href="{% url 'recipe_category_list' %}">Kategoriyalar</a>
+  </div>
   <form method="get" class="toolbar-form">
+    <select class="form-input" name="category" onchange="this.form.submit()">
+      <option value="">Barcha kategoriyalar</option>
+      {% for c in categories %}
+      <option value="{{ c.pk }}" {% if category_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
     <input class="form-input" type="search" name="q" value="{{ q }}" placeholder="Qidiruv">
     <button class="btn btn-ghost" type="submit">Topish</button>
   </form>
@@ -17,6 +26,9 @@
     <a class="recipe-card-body" href="{% url 'recipe_detail' card.recipe.pk %}">
       <div class="meta-row">
         <span class="badge badge-mute">{{ card.recipe.get_meal_type_display }}</span>
+        {% if card.recipe.category %}
+        <span class="badge {% if card.recipe.counts_in_meal_sverka %}badge-mute{% else %}badge-warn{% endif %}">{{ card.recipe.category.name }}</span>
+        {% endif %}
         {% if card.recipe.allergens %}<span class="badge badge-warn">{{ card.recipe.allergens }}</span>{% endif %}
       </div>
       <h3>{{ card.recipe.name }}</h3>

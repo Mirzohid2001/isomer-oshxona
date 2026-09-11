@@ -20,6 +20,7 @@ from kitchen.models import (
     PurchaseOrder,
     PurchaseOrderLine,
     Recipe,
+    RecipeCategory,
     RecipeItem,
     Shift,
     StockChangeRequest,
@@ -435,6 +436,27 @@ class RecipeCalcTests(TestCase):
         )
         self.assertEqual(timezone.localdate(batch.cooked_at), past)
 
+    def test_cook_with_side_recipes_same_portions(self):
+        from kitchen.services import cook_recipes
+
+        side_cat = RecipeCategory.objects.create(name='SideCalc', include_in_meal_sverka=False)
+        side = Recipe.objects.create(name='SalatCalc', meal_type=MealType.LUNCH, category=side_cat)
+        RecipeItem.objects.create(
+            recipe=side,
+            product=self.rice,
+            quantity_per_portion=Decimal('0.010'),
+        )
+        rice_before = Product.objects.get(pk=self.rice.pk).quantity
+        batches = cook_recipes(
+            recipes=[self.recipe, side],
+            portions=10,
+            user=self.user,
+        )
+        self.assertEqual(len(batches), 2)
+        self.rice.refresh_from_db()
+        # main 1.2 + side 0.1
+        self.assertEqual(self.rice.quantity, qty(rice_before - Decimal('1.300')))
+
     def test_base_portions_scales_real_recipe_batch(self):
         recipe = Recipe.objects.create(name='Base10', base_portions=10)
         RecipeItem.objects.create(
@@ -456,7 +478,13 @@ class RecipeEditViewTests(TestCase):
         self.cat = Category.objects.create(name='EditCat')
         self.product = Product.objects.create(name='EditRice', category=self.cat, unit=Unit.KG)
         self.extra = Product.objects.create(name='EditOil', category=self.cat, unit=Unit.L)
-        self.recipe = Recipe.objects.create(name='EditOsh', base_portions=1, meal_type=MealType.LUNCH)
+        self.recipe_cat = RecipeCategory.objects.create(name='AsosiyEdit', include_in_meal_sverka=True)
+        self.recipe = Recipe.objects.create(
+            name='EditOsh',
+            base_portions=1,
+            meal_type=MealType.LUNCH,
+            category=self.recipe_cat,
+        )
         self.item = RecipeItem.objects.create(
             recipe=self.recipe,
             product=self.product,
@@ -469,6 +497,35 @@ class RecipeEditViewTests(TestCase):
         self.assertContains(resp, reverse('recipe_edit', args=[self.recipe.pk]))
         self.assertContains(resp, 'Tahrirlash')
 
+    def test_create_with_one_ingredient_allows_empty_extra_rows(self):
+        resp = self.client.post(
+            reverse('recipe_create'),
+            {
+                'name': 'Bitta ingredient',
+                'description': '',
+                'category': str(self.recipe_cat.pk),
+                'meal_type': MealType.LUNCH,
+                'base_portions': 1,
+                'allergens': '',
+                'is_active': 'on',
+                'items-TOTAL_FORMS': '3',
+                'items-INITIAL_FORMS': '0',
+                'items-MIN_NUM_FORMS': '0',
+                'items-MAX_NUM_FORMS': '50',
+                'items-0-product': str(self.product.pk),
+                'items-0-quantity_per_portion': '0.100',
+                'items-1-product': '',
+                'items-1-quantity_per_portion': '',
+                'items-1-DELETE': 'on',
+                'items-2-product': '',
+                'items-2-quantity_per_portion': '',
+                'items-2-DELETE': 'on',
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        recipe = Recipe.objects.get(name='Bitta ingredient')
+        self.assertEqual(recipe.items.count(), 1)
+
     def test_edit_updates_name_and_ingredients(self):
         url = reverse('recipe_edit', args=[self.recipe.pk])
         resp = self.client.post(
@@ -476,6 +533,7 @@ class RecipeEditViewTests(TestCase):
             {
                 'name': 'Yangilangan osh',
                 'description': '',
+                'category': str(self.recipe_cat.pk),
                 'meal_type': MealType.LUNCH,
                 'base_portions': 2,
                 'allergens': '',
@@ -1031,6 +1089,34 @@ class MealCheckinTests(TestCase):
         self.assertEqual(report['totals']['diff'], 5)
         self.assertEqual(report['totals']['by_meal'][MealType.LUNCH]['eaten'], 5)
         self.assertEqual(report['unique_workers'], 2)
+
+    def test_report_excludes_side_recipes_from_cooked(self):
+        side_cat = RecipeCategory.objects.create(
+            name='Qo‘shimchaTest',
+            include_in_meal_sverka=False,
+        )
+        side = Recipe.objects.create(
+            name='Kefir',
+            meal_type=MealType.LUNCH,
+            category=side_cat,
+        )
+        RecipeItem.objects.create(
+            recipe=side,
+            product=self.product,
+            quantity_per_portion=Decimal('1'),
+        )
+        cook_recipe(recipe=self.recipe, portions=50, user=self.user)
+        cook_recipe(recipe=side, portions=50, user=self.user)
+        record_meal_checkin(worker=self.worker, meal_type=MealType.LUNCH, portions=1)
+        today = timezone.localdate()
+        report = build_meal_report(today.year, today.month)
+        self.assertEqual(report['totals']['cooked'], 50)
+        self.assertEqual(report['totals']['eaten'], 1)
+        self.assertEqual(report['totals']['diff'], 49)
+        self.assertEqual(report['side_total'], 50)
+        self.assertEqual(report['side_recipe_rows'][0]['recipe'], 'Kefir')
+        self.assertEqual(report['main_recipe_rows'][0]['recipe'], 'TushlikOsh')
+        self.assertEqual(len(report['side_detail_rows']), 1)
 
     def test_public_checkin_portions_default_one(self):
         ok = self.client.post(

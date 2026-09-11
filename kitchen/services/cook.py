@@ -127,6 +127,24 @@ def cook_recipe(*, recipe, portions, user=None, note='', shift='', cooked_at=Non
 
 
 @transaction.atomic
+def cook_recipes(*, recipes, portions, user=None, note='', shift='', cooked_at=None):
+    """Asosiy ovqat + qo‘shimchalarni bir xil porsiya bilan ketma-ket pishirish."""
+    batches = []
+    for recipe in recipes:
+        batches.append(
+            cook_recipe(
+                recipe=recipe,
+                portions=portions,
+                user=user,
+                note=note,
+                shift=shift,
+                cooked_at=cooked_at,
+            )
+        )
+    return batches
+
+
+@transaction.atomic
 def cancel_cook_batch(*, batch, user=None):
     batch = CookBatch.objects.select_for_update().get(pk=batch.pk)
     if batch.status == CookBatch.Status.CANCELLED:
@@ -189,6 +207,24 @@ def queue_cook(*, recipe, portions, user=None, note='', shift='', cooked_at=None
     )
     log_action(user, 'navbat', 'cook_batch', batch.pk, f'{recipe.name} × {portions}')
     return batch
+
+
+@transaction.atomic
+def queue_cooks(*, recipes, portions, user=None, note='', shift='', cooked_at=None):
+    """Asosiy + qo‘shimchalarni KDS navbatiga qo‘yish."""
+    batches = []
+    for recipe in recipes:
+        batches.append(
+            queue_cook(
+                recipe=recipe,
+                portions=portions,
+                user=user,
+                note=note,
+                shift=shift,
+                cooked_at=cooked_at,
+            )
+        )
+    return batches
 
 
 @transaction.atomic

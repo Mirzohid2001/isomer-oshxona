@@ -2,7 +2,7 @@
 {% load humanize %}
 {% block title %}{{ recipe.name }} — Oshxona{% endblock %}
 {% block page_title %}{{ recipe.name }}{% endblock %}
-{% block page_subtitle %}{{ recipe.get_meal_type_display }}{% if recipe.allergens %} · {{ recipe.allergens }}{% endif %}{% endblock %}
+{% block page_subtitle %}{{ recipe.get_meal_type_display }}{% if recipe.category %} · {{ recipe.category.name }}{% endif %}{% if recipe.allergens %} · {{ recipe.allergens }}{% endif %}{% endblock %}
 {% block content %}
 <div class="toolbar">
   <div class="toolbar-actions">

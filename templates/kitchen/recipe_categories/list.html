@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Retsept kategoriyalari — Oshxona{% endblock %}
+{% block page_title %}Retsept kategoriyalari{% endblock %}
+{% block page_subtitle %}Asosiy ovqat va qo‘shimchalar (salat, kefir, kompot){% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'recipe_category_create' %}">Yangi kategoriya</a>
+    <a class="btn btn-ghost" href="{% url 'recipe_list' %}">Retseptlar</a>
+  </div>
+  <form method="get" class="toolbar-form">
+    <input class="form-input" type="search" name="q" value="{{ q }}" placeholder="Qidiruv">
+    <button class="btn btn-ghost" type="submit">Filter</button>
+  </form>
+</div>
+<div class="panel">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Nomi</th>
+          <th>Retseptlar</th>
+          <th>Ovqat sverkasi</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in categories %}
+        <tr>
+          <td><strong>{{ c.name }}</strong></td>
+          <td>{{ c.recipe_count }}</td>
+          <td>
+            {% if c.include_in_meal_sverka %}
+            <span class="badge badge-mute">Kiradi</span>
+            {% else %}
+            <span class="badge badge-warn">Qo‘shimcha</span>
+            {% endif %}
+          </td>
+          <td class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="{% url 'recipe_list' %}?category={{ c.pk }}">Retseptlar</a>
+            <a class="btn btn-ghost btn-sm" href="{% url 'recipe_category_edit' c.pk %}">Tahrir</a>
+            {% if c.recipe_count == 0 %}
+            <form method="post" action="{% url 'recipe_category_delete' c.pk %}" class="form-inline" onsubmit="return confirm('O‘chirilsinmi?')">
+              {% csrf_token %}
+              <button class="btn btn-ghost btn-sm" type="submit">O‘chirish</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="empty">Hali kategoriya yo‘q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

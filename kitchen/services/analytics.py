@@ -6,7 +6,7 @@ from django.db.models import Count, F, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
-from kitchen.models import CookBatch, MovementType, Product, Recipe, StockLot, StockMovement
+from kitchen.models import CookBatch, MovementType, Product, Recipe, StockLot, StockMovement, recipe_in_meal_sverka_q
 from kitchen.services.budget import budget_status
 from kitchen.services.precision import money, qty
 from kitchen.services.recipe_cost import recipe_nutrition
@@ -63,6 +63,10 @@ def _cook_qs(start, end):
     )
 
 
+def _main_cook_qs(start, end):
+    return _cook_qs(start, end).filter(recipe_in_meal_sverka_q('recipe'))
+
+
 def _out_qs(start, end):
     start_dt, end_dt = local_date_span_bounds(start, end)
     return (
@@ -95,12 +99,14 @@ def _waste_qs(start, end):
 
 def _period_kpis(start, end):
     cooks = _cook_qs(start, end)
+    main_cooks = _main_cook_qs(start, end)
     cook_cost = money(cooks.aggregate(t=Sum('total_cost'))['t'] or 0)
-    portions = cooks.aggregate(t=Sum('portions'))['t'] or 0
+    meal_cost = money(main_cooks.aggregate(t=Sum('total_cost'))['t'] or 0)
+    portions = main_cooks.aggregate(t=Sum('portions'))['t'] or 0
     batches = cooks.count()
     waste_cost = money(_waste_qs(start, end).aggregate(t=Sum('total_cost'))['t'] or 0)
     receipt_cost = money(_in_qs(start, end).aggregate(t=Sum('total_cost'))['t'] or 0)
-    avg_portion = money(cook_cost / portions) if portions else money(0)
+    avg_portion = money(meal_cost / portions) if portions else money(0)
     return {
         'cook_cost': cook_cost,
         'waste_cost': waste_cost,
@@ -131,7 +137,7 @@ def _delta(current, previous):
 
 def daily_trend(start, end):
     rows = (
-        _cook_qs(start, end)
+        _main_cook_qs(start, end)
         .annotate(day=TruncDate('cooked_at'))
         .values('day')
         .annotate(cost=Sum('total_cost'), portions=Sum('portions'), batches=Count('id'))
