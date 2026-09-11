@@ -36,6 +36,7 @@
       <a class="nav-link {% if 'stock' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'stock_list' %}" @click="navOpen = false">Ombor{% if nav_low_stock %}<span class="nav-badge">{{ nav_low_stock }}</span>{% endif %}</a>
       <a class="nav-link {% if 'receipt' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'receipt_list' %}" @click="navOpen = false">Prixodlar</a>
       <a class="nav-link {% if 'supplier' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'supplier_list' %}" @click="navOpen = false">Yetkazuvchilar</a>
+      <a class="nav-link {% if 'debt' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'debt_list' %}" @click="navOpen = false">Qarzlar</a>
       <div class="nav-label">Ovqat</div>
       <a class="nav-link {% if 'recipe' in request.resolver_match.url_name and 'category' not in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'recipe_list' %}" @click="navOpen = false">Retseptlar</a>
       <a class="nav-link {% if 'recipe_category' in request.resolver_match.url_name %}is-active{% endif %}" href="{% url 'recipe_category_list' %}" @click="navOpen = false">Retsept turlari</a>

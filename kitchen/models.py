@@ -189,6 +189,11 @@ class StockMovement(models.Model):
         blank=True,
         related_name='movements',
     )
+    is_credit = models.BooleanField(
+        'Qarzga',
+        default=False,
+        help_text='Yetkazuvchidan qarzga olingan prixod. To‘lovlar «Qarzlar» bo‘limida yuritiladi.',
+    )
     expiry_date = models.DateField(null=True, blank=True)
     note = models.CharField(max_length=255, blank=True)
     cook_batch = models.ForeignKey(
@@ -222,10 +227,49 @@ class StockMovement(models.Model):
             models.Index(fields=['-created_at'], name='kit_move_created'),
             models.Index(fields=['movement_type', '-created_at'], name='kit_move_type_created'),
             models.Index(fields=['product', '-created_at'], name='kit_move_prod_created'),
+            models.Index(fields=['is_credit', 'supplier'], name='kit_move_credit_supp'),
         ]
 
     def __str__(self):
         return f'{self.get_movement_type_display()} — {self.product}'
+
+
+class SupplierPayment(models.Model):
+    """Yetkazuvchiga qarz bo‘yicha to‘lov (oplata)."""
+
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.PROTECT,
+        related_name='payments',
+        verbose_name='Yetkazuvchi',
+    )
+    amount = models.DecimalField(
+        'Summa',
+        max_digits=14,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    paid_on = models.DateField('To‘lov sanasi', default=timezone.localdate)
+    note = models.CharField('Izoh', max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='supplier_payments',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-paid_on', '-id']
+        verbose_name = 'Yetkazuvchi to‘lovi'
+        verbose_name_plural = 'Yetkazuvchi to‘lovlari'
+        indexes = [
+            models.Index(fields=['supplier', '-paid_on'], name='kit_supp_pay_supp_day'),
+        ]
+
+    def __str__(self):
+        return f'{self.supplier} — {self.amount}'
 
 
 class StorageLocation(models.Model):

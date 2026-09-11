@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Yetkazib beruvchilar — Oshxona{% endblock %}
 {% block page_title %}Yetkazib beruvchilar{% endblock %}
-{% block page_subtitle %}Prixod uchun kontragentlar{% endblock %}
+{% block page_subtitle %}Prixod uchun kontragentlar · qarz holati{% endblock %}
 {% block content %}
 <div class="toolbar">
   <div class="toolbar-actions">
   <a class="btn" href="{% url 'supplier_create' %}">Yangi</a>
+  <a class="btn btn-ghost" href="{% url 'debt_list' %}">Qarzlar</a>
   </div>
 </div>
 <div class="panel">

@@ -187,7 +187,6 @@ def _allocate_from_lots(*, product, quantity, movement, location=None):
 
 
 @transaction.atomic
-@transaction.atomic
 def receive_stock(
     *,
     product,
@@ -200,6 +199,7 @@ def receive_stock(
     created_at=None,
     location=None,
     movement_type=MovementType.IN,
+    is_credit=False,
 ):
     quantity = qty(quantity)
     unit_cost = money(unit_cost)
@@ -207,6 +207,8 @@ def receive_stock(
         raise StockError('Miqdor 0 dan katta bo‘lishi kerak.')
     if unit_cost < 0:
         raise StockError('Narx manfiy bo‘lmasligi kerak.')
+    if is_credit and not supplier:
+        raise StockError('Qarzga prixod uchun yetkazuvchi tanlang.')
 
     product = Product.objects.select_for_update().get(pk=product.pk)
     loc = location or product.default_location
@@ -222,6 +224,7 @@ def receive_stock(
         unit_cost=unit_cost,
         total_cost=money(quantity * unit_cost),
         supplier=supplier,
+        is_credit=bool(is_credit),
         expiry_date=expiry_date,
         note=note,
         created_by=user,
@@ -260,6 +263,7 @@ def update_receipt(
     expiry_date=None,
     note='',
     location=None,
+    is_credit=None,
 ):
     """Mavjud prixodni tahrirlash — partiya va ombor qoldig‘ini sinxron yangilaydi."""
     movement = StockMovement.objects.select_for_update().select_related('product').get(pk=movement.pk)
@@ -272,6 +276,9 @@ def update_receipt(
         raise StockError('Miqdor 0 dan katta bo‘lishi kerak.')
     if unit_cost < 0:
         raise StockError('Narx manfiy bo‘lmasligi kerak.')
+    credit_flag = movement.is_credit if is_credit is None else bool(is_credit)
+    if credit_flag and not supplier:
+        raise StockError('Qarzga prixod uchun yetkazuvchi tanlang.')
 
     product = Product.objects.select_for_update().get(pk=movement.product_id)
     lot = (
@@ -311,11 +318,21 @@ def update_receipt(
     movement.unit_cost = unit_cost
     movement.total_cost = money(quantity * unit_cost)
     movement.supplier = supplier
+    movement.is_credit = credit_flag
     movement.expiry_date = expiry_date
     movement.note = note or ''
     movement.location = loc
     movement.save(
-        update_fields=['quantity', 'unit_cost', 'total_cost', 'supplier', 'expiry_date', 'note', 'location']
+        update_fields=[
+            'quantity',
+            'unit_cost',
+            'total_cost',
+            'supplier',
+            'is_credit',
+            'expiry_date',
+            'note',
+            'location',
+        ]
     )
 
     product.quantity = new_product_qty

@@ -24,6 +24,7 @@ from kitchen.models import (
     StockMovement,
     StorageLocation,
     Supplier,
+    SupplierPayment,
     Worker,
 )
 
@@ -65,6 +66,13 @@ class SupplierAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
+@admin.register(SupplierPayment)
+class SupplierPaymentAdmin(admin.ModelAdmin):
+    list_display = ['paid_on', 'supplier', 'amount', 'note', 'created_by']
+    list_filter = ['paid_on']
+    search_fields = ['supplier__name', 'note']
+
+
 @admin.register(StorageLocation)
 class StorageLocationAdmin(admin.ModelAdmin):
     list_display = ['name', 'code', 'is_active']
@@ -85,8 +93,17 @@ class StockLotAdmin(admin.ModelAdmin):
 
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
-    list_display = ['created_at', 'movement_type', 'product', 'quantity', 'unit_cost', 'total_cost']
-    list_filter = ['movement_type']
+    list_display = [
+        'created_at',
+        'movement_type',
+        'product',
+        'quantity',
+        'unit_cost',
+        'total_cost',
+        'is_credit',
+        'supplier',
+    ]
+    list_filter = ['movement_type', 'is_credit']
 
 
 @admin.register(StockChangeRequest)

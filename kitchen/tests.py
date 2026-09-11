@@ -1296,3 +1296,78 @@ class ErpIsomerixPushTests(TestCase):
                 )
             self.assertTrue(mock_post.called)
             self.assertEqual(mock_post.call_args[0][0]['event'], 'receipt.updated')
+
+
+class SupplierDebtTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user('debtu', 'd@t.t', 'x')
+        self.client = Client()
+        self.client.login(username='debtu', password='x')
+        self.cat = Category.objects.create(name='DebtCat')
+        self.supplier = Supplier.objects.create(name='BozorAli')
+        self.product = Product.objects.create(name='GuruchD', category=self.cat, unit=Unit.KG)
+
+    def test_credit_receipt_and_payment_balance(self):
+        from kitchen.services.debts import debt_summary, record_supplier_payment
+
+        receive_stock(
+            product=self.product,
+            quantity=Decimal('10'),
+            unit_cost=Decimal('1000'),
+            supplier=self.supplier,
+            is_credit=True,
+            user=self.user,
+        )
+        summary = debt_summary()
+        self.assertEqual(summary['credit_total'], Decimal('10000.00'))
+        self.assertEqual(summary['paid_total'], Decimal('0.00'))
+        self.assertEqual(summary['remaining'], Decimal('10000.00'))
+
+        record_supplier_payment(
+            supplier=self.supplier,
+            amount=Decimal('4000'),
+            user=self.user,
+        )
+        summary = debt_summary()
+        self.assertEqual(summary['paid_total'], Decimal('4000.00'))
+        self.assertEqual(summary['remaining'], Decimal('6000.00'))
+        self.assertEqual(summary['rows'][0]['supplier'], self.supplier)
+
+    def test_credit_requires_supplier(self):
+        with self.assertRaises(StockError):
+            receive_stock(
+                product=self.product,
+                quantity=Decimal('1'),
+                unit_cost=Decimal('100'),
+                is_credit=True,
+                user=self.user,
+            )
+
+    def test_debt_pages(self):
+        receive_stock(
+            product=self.product,
+            quantity=Decimal('2'),
+            unit_cost=Decimal('500'),
+            supplier=self.supplier,
+            is_credit=True,
+            user=self.user,
+        )
+        resp = self.client.get(reverse('debt_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'BozorAli')
+        detail = self.client.get(reverse('debt_supplier_detail', args=[self.supplier.pk]))
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, 'GuruchD')
+        pay = self.client.post(
+            reverse('debt_payment_create') + f'?supplier={self.supplier.pk}',
+            {
+                'supplier': str(self.supplier.pk),
+                'amount': '300',
+                'paid_on': timezone.localdate().isoformat(),
+                'note': 'naqd',
+            },
+        )
+        self.assertEqual(pay.status_code, 302)
+        from kitchen.services.debts import debt_summary
+
+        self.assertEqual(debt_summary()['remaining'], Decimal('700.00'))

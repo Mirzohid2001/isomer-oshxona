@@ -36,7 +36,7 @@
   <div class="table-wrap">
     <table class="data">
       <thead>
-        <tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Jami</th><th>Yetkazuvchi</th><th>Muddat</th><th></th></tr>
+        <tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>Narx</th><th>Jami</th><th>Yetkazuvchi</th><th>To‘lov</th><th>Muddat</th><th></th></tr>
       </thead>
       <tbody>
         {% for m in movements %}
@@ -47,11 +47,12 @@
           <td>{{ m.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.total_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.supplier|default:"—" }}</td>
+          <td>{% if m.is_credit %}<span class="badge badge-warn">Qarz</span>{% else %}<span class="badge badge-ok">To‘langan</span>{% endif %}</td>
           <td>{{ m.expiry_date|default:"—" }}</td>
           <td><a class="btn btn-ghost btn-sm" href="{% url 'receipt_edit' m.pk %}">Tahrirlash</a></td>
         </tr>
         {% empty %}
-        <tr><td colspan="8" class="empty">Prixod yo‘q</td></tr>
+        <tr><td colspan="9" class="empty">Prixod yo‘q</td></tr>
         {% endfor %}
       </tbody>
     </table>

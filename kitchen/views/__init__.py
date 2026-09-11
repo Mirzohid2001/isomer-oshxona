@@ -1,3 +1,9 @@
+from kitchen.views.debts import (
+    debt_list,
+    debt_payment_create,
+    debt_payment_delete,
+    debt_supplier_detail,
+)
 from kitchen.views.catalog import (
     category_create,
     category_delete,
@@ -125,6 +131,10 @@ __all__ = [
     'supplier_list',
     'supplier_create',
     'supplier_edit',
+    'debt_list',
+    'debt_supplier_detail',
+    'debt_payment_create',
+    'debt_payment_delete',
     'stock_list',
     'stock_consume_preview',
     'stock_adjust',

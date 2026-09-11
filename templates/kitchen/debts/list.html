@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Qarzlar — Oshxona{% endblock %}
+{% block page_title %}Qarzlar{% endblock %}
+{% block page_subtitle %}Yetkazuvchilarga qarzga prixod va to‘lovlar{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'debt_payment_create' %}">To‘lov yozish</a>
+    <a class="btn btn-ghost" href="{% url 'receipt_create' %}">Qarzga prixod</a>
+    <a class="btn btn-ghost" href="{% url 'supplier_list' %}">Yetkazuvchilar</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat">
+    <div class="stat-label">Jami qarz (prixod)</div>
+    <div class="stat-value">{{ summary.credit_total|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">To‘langan</div>
+    <div class="stat-value">{{ summary.paid_total|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="stat stat-accent">
+    <div class="stat-label">Qolgan qarz</div>
+    <div class="stat-value">{{ summary.remaining|floatformat:0|intcomma }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Qarzdor yetkazuvchi</div>
+    <div class="stat-value">{{ summary.open_count }}</div>
+  </div>
+</div>
+
+<div class="panel panel-spaced-top">
+  <div class="panel-head">
+    <h3>Yetkazuvchi bo‘yicha</h3>
+    <span class="muted-note">Qoldiq = qarzga prixod − to‘lovlar</span>
+  </div>
+  <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Yetkazuvchi</th>
+          <th>Qarzga prixod</th>
+          <th>To‘langan</th>
+          <th>Qoldiq</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><strong>{{ row.supplier.name }}</strong></td>
+          <td>{{ row.credit_total|floatformat:0|intcomma }}</td>
+          <td>{{ row.paid_total|floatformat:0|intcomma }}</td>
+          <td>
+            {% if row.remaining > 0 %}
+            <span class="badge badge-warn">{{ row.remaining|floatformat:0|intcomma }}</span>
+            {% elif row.remaining < 0 %}
+            <span class="badge badge-ok">Ortiqcha {{ row.remaining|floatformat:0|intcomma }}</span>
+            {% else %}
+            <span class="badge badge-ok">0</span>
+            {% endif %}
+          </td>
+          <td class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="{% url 'debt_supplier_detail' row.supplier.pk %}">Batafsil</a>
+            <a class="btn btn-sm" href="{% url 'debt_payment_create' %}?supplier={{ row.supplier.pk }}">To‘lov</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty">Hali qarzga prixod yoki to‘lov yo‘q. Prixodda «Qarzga» ni belgilang.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

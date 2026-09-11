@@ -113,6 +113,12 @@ class ReceiptForm(StyledFormMixin, forms.Form):
         required=False,
         label='Yetkazib beruvchi',
     )
+    is_credit = forms.BooleanField(
+        required=False,
+        initial=False,
+        label='Qarzga',
+        help_text='Belgilansa — yetkazuvchiga qarz yoziladi (keyin «Qarzlar»dan to‘lov).',
+    )
     expiry_date = forms.DateField(required=False, label='Muddat', widget=forms.DateInput(attrs={'type': 'date'}))
     location = forms.ModelChoiceField(
         queryset=None,
@@ -138,6 +144,38 @@ class ReceiptForm(StyledFormMixin, forms.Form):
                 return Product.objects.get(pk=product_id)
             return None
         return self.cleaned_data.get('product')
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('is_credit') and not cleaned.get('supplier'):
+            self.add_error('supplier', 'Qarzga prixod uchun yetkazuvchi tanlang.')
+        return cleaned
+
+
+class SupplierPaymentForm(StyledFormMixin, forms.Form):
+    supplier = forms.ModelChoiceField(
+        queryset=Supplier.objects.filter(is_active=True),
+        label='Yetkazuvchi',
+    )
+    amount = forms.DecimalField(min_value=0.01, decimal_places=2, max_digits=14, label='To‘lov summasi')
+    paid_on = forms.DateField(
+        label='Sana',
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+    )
+    note = forms.CharField(required=False, label='Izoh')
+
+    def __init__(self, *args, supplier=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._locked_supplier = supplier
+        if supplier is not None:
+            self.fields['supplier'].queryset = Supplier.objects.filter(pk=supplier.pk)
+            self.fields['supplier'].initial = supplier.pk
+
+    def clean_supplier(self):
+        if self._locked_supplier is not None:
+            return self._locked_supplier
+        return self.cleaned_data.get('supplier')
 
 
 class AdjustStockForm(StyledFormMixin, forms.Form):
