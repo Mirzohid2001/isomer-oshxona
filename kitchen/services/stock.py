@@ -280,6 +280,41 @@ def update_receipt(
     if credit_flag and not supplier:
         raise StockError('Qarzga prixod uchun yetkazuvchi tanlang.')
 
+    old_supplier = movement.supplier
+    old_was_credit = movement.is_credit
+    old_total = money(movement.total_cost)
+    new_total = money(quantity * unit_cost)
+    old_supplier_id = old_supplier.pk if old_supplier else None
+    new_supplier_id = supplier.pk if supplier else None
+
+    # Qarzga prixodda yetkazuvchini almashtirish to‘lovlar balansini buzadi
+    if credit_flag and old_was_credit and old_supplier_id != new_supplier_id:
+        raise StockError(
+            'Qarzga prixodda yetkazuvchini o‘zgartirib bo‘lmaydi. '
+            'Avval «Qarzlar»dagi to‘lovlarni tekshiring yoki yangi prixod oching.'
+        )
+
+    # Qarzni olib tashlash / summani kamaytirish — to‘lovlardan ortiq qolmasligi kerak
+    if old_was_credit and old_supplier_id:
+        from kitchen.services.debts import credit_receipts_qs, payments_qs
+
+        credit_total = money(
+            credit_receipts_qs(old_supplier).aggregate(t=Sum('total_cost'))['t'] or 0
+        )
+        paid_total = money(payments_qs(old_supplier).aggregate(t=Sum('amount'))['t'] or 0)
+        if not credit_flag:
+            projected_credit = money(credit_total - old_total)
+        elif new_total != old_total:
+            projected_credit = money(credit_total - old_total + new_total)
+        else:
+            projected_credit = None
+        if projected_credit is not None and paid_total > projected_credit:
+            raise StockError(
+                f'Bu yetkazuvchiga allaqachon {paid_total} so‘m to‘lov yozilgan. '
+                f'Tahrirdan keyin qarz ({projected_credit}) to‘lovdan kam bo‘lib qoladi. '
+                f'Avval to‘lovlarni moslang.'
+            )
+
     product = Product.objects.select_for_update().get(pk=movement.product_id)
     lot = (
         StockLot.objects.select_for_update()

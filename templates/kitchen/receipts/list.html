@@ -47,7 +47,7 @@
           <td>{{ m.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.total_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.supplier|default:"—" }}</td>
-          <td>{% if m.is_credit %}<span class="badge badge-warn">Qarz</span>{% else %}<span class="badge badge-ok">To‘langan</span>{% endif %}</td>
+          <td>{% if m.is_credit %}<span class="badge badge-warn">Qarz</span>{% else %}<span class="badge badge-ok">Naqd</span>{% endif %}</td>
           <td>{{ m.expiry_date|default:"—" }}</td>
           <td><a class="btn btn-ghost btn-sm" href="{% url 'receipt_edit' m.pk %}">Tahrirlash</a></td>
         </tr>

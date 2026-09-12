@@ -1371,3 +1371,78 @@ class SupplierDebtTests(TestCase):
         from kitchen.services.debts import debt_summary
 
         self.assertEqual(debt_summary()['remaining'], Decimal('700.00'))
+
+    def test_cannot_change_credit_supplier_after_payment(self):
+        mov = receive_stock(
+            product=self.product,
+            quantity=Decimal('5'),
+            unit_cost=Decimal('1000'),
+            supplier=self.supplier,
+            is_credit=True,
+            user=self.user,
+        )
+        from kitchen.services.debts import record_supplier_payment
+
+        record_supplier_payment(supplier=self.supplier, amount=Decimal('2000'), user=self.user)
+        other = Supplier.objects.create(name='BoshqaYetkazuvchi')
+        with self.assertRaises(StockError):
+            update_receipt(
+                movement=mov,
+                quantity=mov.quantity,
+                unit_cost=mov.unit_cost,
+                supplier=other,
+                is_credit=True,
+                user=self.user,
+            )
+
+    def test_cannot_clear_credit_when_payments_exceed(self):
+        mov = receive_stock(
+            product=self.product,
+            quantity=Decimal('5'),
+            unit_cost=Decimal('1000'),
+            supplier=self.supplier,
+            is_credit=True,
+            user=self.user,
+        )
+        from kitchen.services.debts import record_supplier_payment
+
+        record_supplier_payment(supplier=self.supplier, amount=Decimal('3000'), user=self.user)
+        with self.assertRaises(StockError):
+            update_receipt(
+                movement=mov,
+                quantity=mov.quantity,
+                unit_cost=mov.unit_cost,
+                supplier=self.supplier,
+                is_credit=False,
+                user=self.user,
+            )
+
+    def test_inactive_supplier_still_editable_on_receipt(self):
+        mov = receive_stock(
+            product=self.product,
+            quantity=Decimal('1'),
+            unit_cost=Decimal('100'),
+            supplier=self.supplier,
+            is_credit=True,
+            user=self.user,
+        )
+        self.supplier.is_active = False
+        self.supplier.save(update_fields=['is_active'])
+        resp = self.client.get(reverse('receipt_edit', args=[mov.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'BozorAli')
+
+    def test_receipt_export_includes_credit_column(self):
+        receive_stock(
+            product=self.product,
+            quantity=Decimal('1'),
+            unit_cost=Decimal('100'),
+            supplier=self.supplier,
+            is_credit=True,
+            user=self.user,
+        )
+        resp = self.client.get(reverse('receipt_export') + '?format=csv')
+        self.assertEqual(resp.status_code, 200)
+        body = resp.content.decode('utf-8-sig')
+        self.assertIn('Qarz', body)
+        self.assertIn('GuruchD', body)

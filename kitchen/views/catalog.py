@@ -213,10 +213,16 @@ def category_quick_create(request):
 
 @login_required
 def supplier_list(request):
+    from kitchen.services.debts import supplier_debt_rows
+
+    debt_map = {r['supplier'].pk: r['remaining'] for r in supplier_debt_rows()}
+    suppliers = list(Supplier.objects.all())
+    for s in suppliers:
+        s.debt_remaining = debt_map.get(s.pk)
     return render(
         request,
         'kitchen/suppliers/list.html',
-        {'suppliers': Supplier.objects.all()},
+        {'suppliers': suppliers},
     )
 
 

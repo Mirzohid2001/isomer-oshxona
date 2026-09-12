@@ -2,10 +2,17 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from kitchen.forms import SupplierPaymentForm
 from kitchen.models import Supplier, SupplierPayment
-from kitchen.services.debts import debt_summary, record_supplier_payment, supplier_debt_detail
+from kitchen.services.debts import (
+    delete_supplier_payment,
+    debt_summary,
+    record_supplier_payment,
+    supplier_debt_detail,
+)
+from kitchen.services.precision import money
 
 
 @login_required
@@ -35,11 +42,17 @@ def debt_supplier_detail(request, pk):
 @login_required
 def debt_payment_create(request):
     supplier = None
+    remaining = None
     sid = request.GET.get('supplier') or request.POST.get('supplier_lock')
     if sid:
         supplier = get_object_or_404(Supplier, pk=sid)
+        remaining = supplier_debt_detail(supplier)['remaining']
 
-    form = SupplierPaymentForm(request.POST or None, supplier=supplier)
+    form = SupplierPaymentForm(
+        request.POST or None,
+        supplier=supplier,
+        remaining=remaining,
+    )
     if request.method == 'POST' and form.is_valid():
         try:
             payment = record_supplier_payment(
@@ -49,6 +62,12 @@ def debt_payment_create(request):
                 note=form.cleaned_data.get('note') or '',
                 user=request.user,
             )
+            pay_amount = money(payment.amount)
+            if remaining is not None and pay_amount > remaining:
+                messages.warning(
+                    request,
+                    f'To‘lov qoldiqdan ({remaining} so‘m) ko‘p — oldindan to‘lov sifatida saqlandi.',
+                )
             messages.success(
                 request,
                 f'To‘lov yozildi: {payment.supplier.name} — {payment.amount} so‘m',
@@ -62,6 +81,7 @@ def debt_payment_create(request):
         {
             'form': form,
             'supplier': supplier,
+            'remaining': remaining,
             'title': 'Qarz to‘lovi',
             'cancel_url': (
                 reverse('debt_supplier_detail', args=[supplier.pk])
@@ -73,11 +93,10 @@ def debt_payment_create(request):
 
 
 @login_required
+@require_POST
 def debt_payment_delete(request, pk):
     payment = get_object_or_404(SupplierPayment.objects.select_related('supplier'), pk=pk)
-    supplier_id = payment.supplier_id
-    if request.method == 'POST':
-        label = f'{payment.supplier.name}: {payment.amount}'
-        payment.delete()
-        messages.success(request, f'To‘lov o‘chirildi ({label}).')
-    return redirect('debt_supplier_detail', pk=supplier_id)
+    amount = payment.amount
+    supplier = delete_supplier_payment(payment=payment, user=request.user)
+    messages.success(request, f'To‘lov o‘chirildi ({supplier.name}: {amount}).')
+    return redirect('debt_supplier_detail', pk=supplier.pk)

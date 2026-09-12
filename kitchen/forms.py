@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from django.forms import inlineformset_factory
 from django.utils import timezone
 
@@ -127,13 +128,18 @@ class ReceiptForm(StyledFormMixin, forms.Form):
     )
     note = forms.CharField(required=False, label='Izoh')
 
-    def __init__(self, *args, lock_product=False, **kwargs):
+    def __init__(self, *args, lock_product=False, instance_supplier=None, **kwargs):
         super().__init__(*args, **kwargs)
         from kitchen.models import StorageLocation
         self.fields['location'].queryset = StorageLocation.objects.filter(is_active=True)
         self._lock_product = lock_product
+        self._instance_supplier = instance_supplier
+        # Tahrirda faol emas yetkazuvchi ham ko‘rinsin
+        if instance_supplier is not None:
+            self.fields['supplier'].queryset = Supplier.objects.filter(
+                Q(is_active=True) | Q(pk=instance_supplier.pk)
+            )
         if lock_product:
-            # Disabled maydon POST’da kelmaydi — readonly ko‘rinish
             self.fields['product'].disabled = True
             self.fields['product'].required = False
 
@@ -165,12 +171,19 @@ class SupplierPaymentForm(StyledFormMixin, forms.Form):
     )
     note = forms.CharField(required=False, label='Izoh')
 
-    def __init__(self, *args, supplier=None, **kwargs):
+    def __init__(self, *args, supplier=None, remaining=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._locked_supplier = supplier
+        self._remaining = remaining
         if supplier is not None:
-            self.fields['supplier'].queryset = Supplier.objects.filter(pk=supplier.pk)
+            self.fields['supplier'].queryset = Supplier.objects.filter(
+                Q(pk=supplier.pk) | Q(is_active=True)
+            ).filter(pk=supplier.pk)
             self.fields['supplier'].initial = supplier.pk
+        if remaining is not None:
+            self.fields['amount'].help_text = (
+                f'Qoldiq qarz: {remaining} so‘m. Ko‘proq to‘lash mumkin (oldindan to‘lov).'
+            )
 
     def clean_supplier(self):
         if self._locked_supplier is not None:

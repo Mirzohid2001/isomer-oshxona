@@ -80,15 +80,21 @@ def debt_summary():
     }
 
 
-def supplier_debt_detail(supplier):
+def supplier_debt_detail(supplier, *, limit=500):
     credits_qs = credit_receipts_qs(supplier)
     payments_all = payments_qs(supplier)
     credit_total = money(credits_qs.aggregate(t=Sum('total_cost'))['t'] or 0)
     paid_total = money(payments_all.aggregate(t=Sum('amount'))['t'] or 0)
+    credits_count = credits_qs.count()
+    payments_count = payments_all.count()
     return {
         'supplier': supplier,
-        'credits': list(credits_qs.order_by('-created_at')[:100]),
-        'payments': list(payments_all.order_by('-paid_on', '-id')[:100]),
+        'credits': list(credits_qs.order_by('-created_at')[:limit]),
+        'payments': list(payments_all.order_by('-paid_on', '-id')[:limit]),
+        'credits_count': credits_count,
+        'payments_count': payments_count,
+        'credits_truncated': credits_count > limit,
+        'payments_truncated': payments_count > limit,
         'credit_total': credit_total,
         'paid_total': paid_total,
         'remaining': money(credit_total - paid_total),
@@ -115,3 +121,13 @@ def record_supplier_payment(*, supplier, amount, paid_on=None, note='', user=Non
         f'{supplier.name}: {amount}',
     )
     return payment
+
+
+@atomic
+def delete_supplier_payment(*, payment, user=None):
+    supplier = payment.supplier
+    label = f'{supplier.name}: {payment.amount}'
+    pk = payment.pk
+    payment.delete()
+    log_action(user, 'qarz_tolov_ochirish', 'supplier_payment', pk, label)
+    return supplier

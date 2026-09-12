@@ -212,7 +212,12 @@ def receipt_edit(request, pk):
         'location': movement.location_id,
         'note': movement.note,
     }
-    form = ReceiptForm(request.POST or None, initial=initial, lock_product=True)
+    form = ReceiptForm(
+        request.POST or None,
+        initial=initial,
+        lock_product=True,
+        instance_supplier=movement.supplier,
+    )
     if request.method == 'POST' and form.is_valid():
         try:
             update_receipt(
@@ -265,6 +270,7 @@ def receipt_export(request):
             m.unit_cost,
             m.total_cost,
             m.supplier.name if m.supplier else '',
+            'Qarz' if m.is_credit else 'Naqd',
             m.note,
         ]
         for m in movements
@@ -279,7 +285,7 @@ def receipt_export(request):
         filename='prixodlar',
         title='Prixodlar hisoboti',
         subtitle=' · '.join(subtitle_parts) or 'Barcha prixodlar',
-        headers=['Sana', 'Mahsulot', 'Miqdor', 'Narx', 'Jami', 'Yetkazuvchi', 'Izoh'],
+        headers=['Sana', 'Mahsulot', 'Miqdor', 'Narx', 'Jami', 'Yetkazuvchi', 'To‘lov', 'Izoh'],
         rows=rows,
         numeric_cols={2, 3, 4},
     )
