@@ -94,6 +94,7 @@ OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
 # ERP Isomerix — oshxona prixodlari → KitchenExpense
 # URL: https://erp-isomerix.uz/accounting/api/integrations/chefpro/kitchen-expense/
 ERP_ISOMERIX_WEBHOOK_URL = os.environ.get('ERP_ISOMERIX_WEBHOOK_URL', '').strip()
+ERP_ISOMERIX_PAYMENT_WEBHOOK_URL = os.environ.get('ERP_ISOMERIX_PAYMENT_WEBHOOK_URL', '').strip()
 ERP_ISOMERIX_BEARER_TOKEN = os.environ.get('ERP_ISOMERIX_BEARER_TOKEN', '').strip()
 ERP_ISOMERIX_TIMEOUT_SEC = float(os.environ.get('ERP_ISOMERIX_TIMEOUT_SEC', '8') or 8)
 

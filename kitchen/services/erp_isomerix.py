@@ -1,8 +1,8 @@
 """
-ChefPro prixod → ERP Isomerix KitchenExpense webhook.
+ChefPro prixod / qarz to‘lovi → ERP Isomerix webhook.
 
 Sozlama bo‘sh bo‘lsa — hech narsa yuborilmaydi (xavfsiz no-op).
-Faqat oddiy prixod (IN, cook_batch yo‘q).
+Faqat oddiy prixod (IN, cook_batch yo‘q) va SupplierPayment.
 """
 from __future__ import annotations
 
@@ -23,6 +23,12 @@ def _webhook_url() -> str:
     return (getattr(settings, 'ERP_ISOMERIX_WEBHOOK_URL', None) or '').strip()
 
 
+def _payment_webhook_url() -> str:
+    """Alohida URL bo‘lmasa — expense webhook (event=payment.*) ishlatiladi."""
+    dedicated = (getattr(settings, 'ERP_ISOMERIX_PAYMENT_WEBHOOK_URL', None) or '').strip()
+    return dedicated or _webhook_url()
+
+
 def _bearer() -> str:
     return (getattr(settings, 'ERP_ISOMERIX_BEARER_TOKEN', None) or '').strip()
 
@@ -37,6 +43,10 @@ def is_configured() -> bool:
 
 def external_id_for_movement(movement_id: int) -> str:
     return f'chefpro-sm-{int(movement_id)}'
+
+
+def external_id_for_payment(payment_id: int) -> str:
+    return f'chefpro-pay-{int(payment_id)}'
 
 
 def _receipt_payload(movement, event: str) -> dict[str, Any]:
@@ -76,13 +86,39 @@ def _delete_payload(movement_id: int) -> dict[str, Any]:
     }
 
 
-def _post_json(body: dict[str, Any]) -> None:
-    url = _webhook_url()
-    if not url:
+def _payment_payload(payment, event: str = 'created') -> dict[str, Any]:
+    return {
+        'schema_version': 1,
+        'source': 'chefpro',
+        'event': f'payment.{event}',
+        'payload': {
+            'external_id': external_id_for_payment(payment.pk),
+            'supplier_name': payment.supplier.name,
+            'amount': str(payment.amount),
+            'paid_on': payment.paid_on.isoformat(),
+            'notes': (payment.note or '').strip() or f'ChefPro to‘lov #{payment.pk}',
+            'payment_id': payment.pk,
+            'supplier_id': payment.supplier_id,
+        },
+    }
+
+
+def _payment_delete_payload(payment_id: int) -> dict[str, Any]:
+    return {
+        'schema_version': 1,
+        'source': 'chefpro',
+        'event': 'payment.deleted',
+        'payload': {'external_id': external_id_for_payment(payment_id)},
+    }
+
+
+def _post_json(body: dict[str, Any], *, url: str | None = None) -> None:
+    target = (url or _webhook_url()).strip()
+    if not target:
         return
     data = json.dumps(body).encode('utf-8')
     req = urllib.request.Request(
-        url,
+        target,
         data=data,
         method='POST',
         headers={
@@ -129,6 +165,26 @@ def push_receipt_deleted(movement_id: int) -> None:
         )
 
 
+def push_payment(payment, event: str = 'created') -> None:
+    if not is_configured():
+        return
+    try:
+        _post_json(_payment_payload(payment, event), url=_payment_webhook_url())
+    except (urllib.error.URLError, TimeoutError, OSError):
+        logger.exception('ERP Isomerix payment webhook failed (payment %s)', payment.pk)
+
+
+def push_payment_deleted(payment_id: int) -> None:
+    if not is_configured():
+        return
+    try:
+        _post_json(_payment_delete_payload(payment_id), url=_payment_webhook_url())
+    except (urllib.error.URLError, TimeoutError, OSError):
+        logger.exception(
+            'ERP Isomerix payment delete webhook failed (payment %s)', payment_id
+        )
+
+
 def schedule_push_receipt(movement_id: int, event: str = 'created') -> None:
     """After DB commit — do not block the stock transaction on network."""
 
@@ -155,6 +211,34 @@ def schedule_push_receipt(movement_id: int, event: str = 'created') -> None:
 def schedule_push_receipt_deleted(movement_id: int) -> None:
     def run():
         push_receipt_deleted(movement_id)
+
+    if connection.in_atomic_block:
+        transaction.on_commit(run)
+    else:
+        run()
+
+
+def schedule_push_payment(payment_id: int, event: str = 'created') -> None:
+    def run():
+        from kitchen.models import SupplierPayment
+
+        try:
+            payment = SupplierPayment.objects.select_related('supplier').get(pk=payment_id)
+        except SupplierPayment.DoesNotExist:
+            logger.warning('ERP payment push skipped: payment %s not found', payment_id)
+            return
+        logger.info('ERP payment push start payment=%s event=%s', payment_id, event)
+        push_payment(payment, event=event)
+
+    if connection.in_atomic_block:
+        transaction.on_commit(run)
+    else:
+        run()
+
+
+def schedule_push_payment_deleted(payment_id: int) -> None:
+    def run():
+        push_payment_deleted(payment_id)
 
     if connection.in_atomic_block:
         transaction.on_commit(run)

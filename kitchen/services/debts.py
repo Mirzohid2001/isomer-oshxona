@@ -120,6 +120,9 @@ def record_supplier_payment(*, supplier, amount, paid_on=None, note='', user=Non
         payment.pk,
         f'{supplier.name}: {amount}',
     )
+    from kitchen.services.erp_isomerix import schedule_push_payment
+
+    schedule_push_payment(payment.pk, event='created')
     return payment
 
 
@@ -130,4 +133,7 @@ def delete_supplier_payment(*, payment, user=None):
     pk = payment.pk
     payment.delete()
     log_action(user, 'qarz_tolov_ochirish', 'supplier_payment', pk, label)
+    from kitchen.services.erp_isomerix import schedule_push_payment_deleted
+
+    schedule_push_payment_deleted(pk)
     return supplier

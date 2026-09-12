@@ -1297,6 +1297,31 @@ class ErpIsomerixPushTests(TestCase):
             self.assertTrue(mock_post.called)
             self.assertEqual(mock_post.call_args[0][0]['event'], 'receipt.updated')
 
+    @override_settings(
+        ERP_ISOMERIX_WEBHOOK_URL='https://erp.example/webhook/',
+        ERP_ISOMERIX_BEARER_TOKEN='secret-token',
+    )
+    def test_supplier_payment_posts_payload(self):
+        from unittest.mock import patch
+
+        from kitchen.services import erp_isomerix
+        from kitchen.services.debts import record_supplier_payment
+
+        with patch.object(erp_isomerix, '_post_json') as mock_post:
+            with self.captureOnCommitCallbacks(execute=True):
+                payment = record_supplier_payment(
+                    supplier=self.supplier,
+                    amount=Decimal('3500'),
+                    user=self.user,
+                )
+            self.assertTrue(mock_post.called)
+            body = mock_post.call_args[0][0]
+            self.assertEqual(body['event'], 'payment.created')
+            payload = body['payload']
+            self.assertEqual(payload['external_id'], f'chefpro-pay-{payment.pk}')
+            self.assertEqual(payload['supplier_name'], 'Yetkazuvchi')
+            self.assertEqual(payload['amount'], '3500.00')
+
 
 class SupplierDebtTests(TestCase):
     def setUp(self):
