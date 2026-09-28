@@ -116,6 +116,7 @@ def meal_checkin_submit(request):
         {
             'ok': True,
             'checkin': checkin,
+            'updated': bool(getattr(checkin, 'was_updated', False)),
             'worker': worker,
             'meal_label': checkin.get_meal_type_display(),
         },

@@ -49,7 +49,7 @@ def search_workers(query, limit=20):
 
 @transaction.atomic
 def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None, portions=1):
-    """Bir ishchi / kun / mahal — faqat bir marta. Takror bo‘lsa ValueError."""
+    """Bir ishchi / kun / mahal — bitta yozuv. Qayta QR porsiyani yangilaydi."""
     from kitchen.services.worker_ops import resolve_served_at
 
     if meal_type not in MEAL_LABELS:
@@ -78,20 +78,39 @@ def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None, po
     if day > timezone.localdate():
         raise ValueError('Kelajak sanasini tanlab bo‘lmaydi.')
 
+    existing = (
+        MealCheckin.objects.select_for_update()
+        .filter(worker=worker, served_on=day, meal_type=meal_type)
+        .first()
+    )
+    if existing:
+        existing.portions = portions
+        if day == today:
+            existing.served_at = when
+        existing.save(update_fields=['portions', 'served_at'])
+        existing.was_updated = True
+        return existing
     try:
-        return MealCheckin.objects.create(
+        checkin = MealCheckin.objects.create(
             worker=worker,
             meal_type=meal_type,
             portions=portions,
             served_on=day,
             served_at=when,
         )
-    except IntegrityError as exc:
-        raise ValueError(
-            f'{worker.full_name} · {day.strftime("%d.%m.%Y")} · '
-            f'{MEAL_LABELS[meal_type]} allaqachon belgilangan. '
-            f'Tahrirlash orqali porsiyani o‘zgartiring.'
-        ) from exc
+    except IntegrityError:
+        existing = (
+            MealCheckin.objects.select_for_update()
+            .get(worker=worker, served_on=day, meal_type=meal_type)
+        )
+        existing.portions = portions
+        if day == today:
+            existing.served_at = when
+        existing.save(update_fields=['portions', 'served_at'])
+        existing.was_updated = True
+        return existing
+    checkin.was_updated = False
+    return checkin
 
 
 def month_span(year, month):

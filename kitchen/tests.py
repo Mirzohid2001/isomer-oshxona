@@ -1083,13 +1083,15 @@ class MealCheckinTests(TestCase):
         self.assertEqual(ok.status_code, 200)
         self.assertContains(ok, 'Tasdiqlandi')
         self.assertEqual(MealCheckin.objects.count(), 1)
-        dup = self.client.post(
+        again = self.client.post(
             reverse('meal_checkin_submit'),
-            {'worker_id': self.worker.pk, 'meal_type': MealType.LUNCH},
+            {'worker_id': self.worker.pk, 'meal_type': MealType.LUNCH, 'portions': '16'},
         )
-        self.assertEqual(dup.status_code, 400)
+        self.assertEqual(again.status_code, 200)
+        self.assertContains(again, '16 porsiya')
         self.assertEqual(MealCheckin.objects.count(), 1)
         checkin = MealCheckin.objects.get()
+        self.assertEqual(checkin.portions, 16)
         self.assertLess(abs((timezone.now() - checkin.served_at).total_seconds()), 30)
 
     def test_today_board_filters_by_meal_and_name(self):
