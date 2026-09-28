@@ -2,6 +2,7 @@ from datetime import datetime, time
 from io import BytesIO
 
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from openpyxl import Workbook, load_workbook
@@ -44,7 +45,12 @@ def update_meal_checkin(*, checkin, worker, meal_type, served_on, portions=1):
     if served_on > timezone.localdate():
         raise ValueError('Kelajak sanasini tanlab bo‘lmaydi.')
 
-    when = resolve_served_at(served_on=served_on)
+    # Sana o‘zgarsa ham belgilangan soat saqlanadi (12:00 ga qaytmasin).
+    local_stamp = timezone.localtime(checkin.served_at)
+    when = timezone.make_aware(
+        datetime.combine(served_on, local_stamp.time().replace(microsecond=0)),
+        timezone.get_current_timezone(),
+    )
     clash = (
         MealCheckin.objects.select_for_update()
         .filter(worker=worker, served_on=served_on, meal_type=meal_type)
@@ -71,28 +77,70 @@ def delete_meal_checkin(*, checkin):
     checkin.delete()
 
 
-def build_today_board(day=None):
+def build_today_board(day=None, *, meal_type='', department='', q=''):
     day = day or timezone.localdate()
-    checkins = list(
-        MealCheckin.objects.filter(served_on=day)
-        .select_related('worker')
-        .order_by('-served_at')
-    )
+    base = MealCheckin.objects.filter(served_on=day).select_related('worker')
+    totals = list(base)
     by_meal = {m: 0 for m in MEAL_ORDER}
-    for row in checkins:
+    for row in totals:
         by_meal[row.meal_type] = by_meal.get(row.meal_type, 0) + int(row.portions or 1)
-    unique_workers = len({c.worker_id for c in checkins})
-    portion_total = sum(int(c.portions or 1) for c in checkins)
+
+    meal_type = (meal_type or '').strip()
+    department = (department or '').strip()
+    q = (q or '').strip()
+    rows = base.order_by('-served_at')
+    if meal_type in MEAL_LABELS:
+        rows = rows.filter(meal_type=meal_type)
+    if department:
+        rows = rows.filter(worker__department__iexact=department)
+    if q:
+        rows = rows.filter(
+            Q(worker__first_name__icontains=q)
+            | Q(worker__last_name__icontains=q)
+            | Q(worker__employee_code__icontains=q)
+            | Q(worker__department__icontains=q)
+        )
     return {
         'day': day,
-        'checkins': checkins,
+        'checkins': list(rows),
         'by_meal': by_meal,
-        'total': len(checkins),
-        'portion_total': portion_total,
-        'unique_workers': unique_workers,
+        'total': len(totals),
+        'portion_total': sum(int(c.portions or 1) for c in totals),
+        'unique_workers': len({c.worker_id for c in totals}),
         'meal_order': MEAL_ORDER,
         'meal_labels': MEAL_LABELS,
+        'meal_type': meal_type,
+        'department': department,
+        'q': q,
     }
+
+
+def workers_excel_response(workers):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Ishchilar'
+    headers = ['Familiya', 'Ism', 'Bo‘lim', 'Kod', 'Holat']
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    for worker in workers:
+        ws.append([
+            worker.last_name,
+            worker.first_name,
+            worker.department or '',
+            worker.employee_code or '',
+            'Faol' if worker.is_active else 'O‘chiq',
+        ])
+    for col in ('A', 'B', 'C', 'D', 'E'):
+        ws.column_dimensions[col].width = 18
+    buf = BytesIO()
+    wb.save(buf)
+    response = HttpResponse(
+        buf.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="ishchilar.xlsx"'
+    return response
 
 
 def worker_import_template_response():

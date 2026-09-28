@@ -10,7 +10,26 @@
       <label>Sana</label>
       <input class="form-input" type="date" name="date" value="{{ selected_day|date:'Y-m-d' }}">
     </div>
-    <button class="btn btn-ghost" type="submit">Ko‘rsatish</button>
+    <div class="form-field">
+      <label>Mahal</label>
+      <select class="form-select" name="meal_type">
+        <option value="">Barchasi</option>
+        {% for value, label in meal_choices %}
+        <option value="{{ value }}" {% if selected_meal == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Bo‘lim</label>
+      <select class="form-select" name="department">
+        <option value="">Barchasi</option>
+        {% for dept in departments %}
+        <option value="{{ dept }}" {% if department == dept %}selected{% endif %}>{{ dept }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <input class="form-input" type="search" name="q" value="{{ q }}" placeholder="Ism, familiya, kod">
+    <button class="btn btn-ghost" type="submit">Filter</button>
   </form>
   <div class="toolbar-actions">
     <a class="btn btn-ghost" href="{% url 'meal_checkin_list' %}?date={{ selected_day|date:'Y-m-d' }}">Barcha yozuvlar</a>
@@ -21,7 +40,7 @@
 
 <div
   id="today-live"
-  hx-get="{% url 'meal_today' %}?date={{ selected_day|date:'Y-m-d' }}&partial=1"
+  hx-get="{% url 'meal_today' %}?{{ live_query }}"
   hx-trigger="every 12s"
   hx-swap="innerHTML"
 >

@@ -796,6 +796,21 @@ class ViewSmokeTests(TestCase):
         resp = self.client.get(reverse('supplier_create'))
         self.assertContains(resp, reverse('supplier_list'))
 
+    def test_office_issue_is_separate_from_waste(self):
+        from kitchen.models import MovementType, StockMovement
+        from kitchen.services.stock import record_office
+
+        product = Product.objects.create(name='Choy', category=self.cat, unit=Unit.PCS, quantity=Decimal('5'))
+        receive_stock(product=product, quantity=Decimal('5'), unit_cost=Decimal('1000'), user=self.user)
+        record_office(product=product, quantity=Decimal('1'), user=self.user, note='ofis choy')
+        self.assertEqual(StockMovement.objects.filter(movement_type=MovementType.WASTE).count(), 0)
+        self.assertTrue(StockMovement.objects.filter(movement_type=MovementType.OFFICE, note='ofis choy').exists())
+        page = self.client.get(reverse('office_list'))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'ofis choy')
+        waste = self.client.get(reverse('waste_list'))
+        self.assertNotContains(waste, 'ofis choy')
+
     def test_waste_form_page(self):
         resp = self.client.get(reverse('waste_create'))
         self.assertEqual(resp.status_code, 200)
@@ -1074,6 +1089,39 @@ class MealCheckinTests(TestCase):
         )
         self.assertEqual(dup.status_code, 400)
         self.assertEqual(MealCheckin.objects.count(), 1)
+        checkin = MealCheckin.objects.get()
+        self.assertLess(abs((timezone.now() - checkin.served_at).total_seconds()), 30)
+
+    def test_today_board_filters_by_meal_and_name(self):
+        from kitchen.services.worker_ops import build_today_board
+
+        record_meal_checkin(worker=self.worker, meal_type=MealType.LUNCH, portions=1)
+        other = Worker.objects.create(first_name='Vali', last_name='Sobirov', department='Ofis')
+        record_meal_checkin(worker=other, meal_type=MealType.BREAKFAST, portions=1)
+        day = timezone.localdate()
+        lunch = build_today_board(day, meal_type=MealType.LUNCH)
+        self.assertEqual(lunch['total'], 2)
+        self.assertEqual(len(lunch['checkins']), 1)
+        self.assertEqual(lunch['checkins'][0].worker_id, self.worker.pk)
+        named = build_today_board(day, q='Sobirov')
+        self.assertEqual(len(named['checkins']), 1)
+        self.assertEqual(named['checkins'][0].worker.department, 'Ofis')
+
+    def test_edit_keeps_registration_clock(self):
+        from kitchen.services.worker_ops import update_meal_checkin
+
+        checkin = record_meal_checkin(worker=self.worker, meal_type=MealType.LUNCH, portions=1)
+        stamp = checkin.served_at
+        update_meal_checkin(
+            checkin=checkin,
+            worker=self.worker,
+            meal_type=MealType.LUNCH,
+            served_on=checkin.served_on,
+            portions=4,
+        )
+        checkin.refresh_from_db()
+        self.assertEqual(checkin.portions, 4)
+        self.assertEqual(checkin.served_at.replace(microsecond=0), stamp.replace(microsecond=0))
 
     def test_report_sverka_cooked_vs_eaten(self):
         cook_recipe(recipe=self.recipe, portions=10, user=self.user)

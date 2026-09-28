@@ -98,6 +98,7 @@ from kitchen.views.meals import (
     worker_create,
     worker_edit,
     worker_import,
+    worker_export,
     worker_import_template,
     worker_list,
 )
@@ -110,6 +111,8 @@ from kitchen.views.stock_views import (
     stock_adjust,
     stock_consume_preview,
     stock_list,
+    office_create,
+    office_list,
     waste_create,
     waste_list,
 )
@@ -145,6 +148,8 @@ __all__ = [
     'receipt_export',
     'waste_list',
     'waste_create',
+    'office_list',
+    'office_create',
     'recipe_list',
     'recipe_detail',
     'recipe_print',
@@ -196,6 +201,7 @@ __all__ = [
     'meal_checkin',
     'meal_checkin_search',
     'meal_checkin_submit',
+    'worker_export',
     'worker_list',
     'worker_create',
     'worker_edit',

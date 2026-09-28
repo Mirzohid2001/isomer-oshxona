@@ -29,6 +29,7 @@ class MovementType(models.TextChoices):
     OUT = 'out', 'Rasxod'
     ADJUST = 'adjust', 'Tuzatish'
     WASTE = 'waste', 'Chiqindi'
+    OFFICE = 'office', 'Ofis'
 
 
 class Shift(models.TextChoices):

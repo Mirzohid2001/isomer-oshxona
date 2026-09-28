@@ -556,6 +556,21 @@ def record_waste(*, product, quantity, user=None, note='', location=None):
 
 
 @transaction.atomic
+def record_office(*, product, quantity, user=None, note='', location=None):
+    """Ofis chiqimi — chiqindi va pishirishdan alohida ombor rasxodi."""
+    movement = consume_stock(
+        product=product,
+        quantity=quantity,
+        user=user,
+        note=note or 'Ofis',
+        movement_type=MovementType.OFFICE,
+        location=location,
+    )
+    log_action(user, 'ofis_chiqim', 'product', product.pk, note)
+    return movement
+
+
+@transaction.atomic
 def ensure_lots_for_product(product):
     product = Product.objects.select_for_update().get(pk=product.pk)
     lot_sum = qty(

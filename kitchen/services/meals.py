@@ -67,7 +67,13 @@ def record_meal_checkin(*, worker, meal_type, served_at=None, served_on=None, po
     if not worker.is_active:
         raise ValueError('Ishchi faol emas.')
 
-    when = resolve_served_at(served_on=served_on, served_at=served_at)
+    today = timezone.localdate()
+    # QR (bugungi sana, vaqt berilmagan) — haqiqiy belgilash vaqti.
+    # Eski kun — berilgan vaqt yoki kun o‘rtasi.
+    if served_at is None and (served_on is None or served_on == today):
+        when = timezone.now()
+    else:
+        when = resolve_served_at(served_on=served_on, served_at=served_at)
     day = timezone.localtime(when).date()
     if day > timezone.localdate():
         raise ValueError('Kelajak sanasini tanlab bo‘lmaydi.')

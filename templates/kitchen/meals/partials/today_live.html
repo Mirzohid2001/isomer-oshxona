@@ -33,7 +33,7 @@
 <div class="panel panel-spaced-top">
   <div class="panel-head">
     <h3>So‘nggi belgilashlar</h3>
-    <span class="muted-note">Avtomatik yangilanadi · mahal sonlari = porsiya</span>
+    <span class="muted-note">Vaqt = QR belgilangan soat · jadval filterlangan, yuqoridagi sonlar kun bo‘yicha</span>
   </div>
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">
@@ -51,13 +51,13 @@
             <a class="btn btn-ghost btn-sm" href="{% url 'meal_checkin_edit' c.pk %}">Tahrir</a>
             <form method="post" action="{% url 'meal_checkin_delete' c.pk %}" style="display:inline" onsubmit="return confirm('O‘chirasizmi?');">
               {% csrf_token %}
-              <input type="hidden" name="next" value="{% url 'meal_today' %}?date={{ board.day|date:'Y-m-d' }}">
+              <input type="hidden" name="next" value="{% url 'meal_today' %}?date={{ board.day|date:'Y-m-d' }}{% if board.meal_type %}&meal_type={{ board.meal_type }}{% endif %}{% if board.department %}&department={{ board.department|urlencode }}{% endif %}{% if board.q %}&q={{ board.q|urlencode }}{% endif %}">
               <button class="btn btn-ghost btn-sm" type="submit">O‘chirish</button>
             </form>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="empty">Hali belgilash yo‘q</td></tr>
+        <tr><td colspan="6" class="empty">{% if board.meal_type or board.department or board.q %}Filtr bo‘yicha yozuv yo‘q{% else %}Hali belgilash yo‘q{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

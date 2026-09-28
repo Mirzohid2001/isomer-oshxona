@@ -7,9 +7,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
-from kitchen.forms import AdjustStockForm, ReceiptForm, WasteForm
+from kitchen.forms import AdjustStockForm, OfficeIssueForm, ReceiptForm, WasteForm
 from kitchen.models import MovementType, Product, StockMovement
-from kitchen.services import StockError, adjust_stock, receive_stock, record_waste
+from kitchen.services import StockError, adjust_stock, receive_stock, record_office
 from kitchen.services.export import spreadsheet_download
 from kitchen.services.precision import qty
 from kitchen.services.stock import allocation_rows_from_movement, preview_fefo_allocation, update_receipt
@@ -330,5 +330,40 @@ def waste_create(request):
     return render(
         request,
         'kitchen/waste/form.html',
+        {'form': form},
+    )
+
+
+@login_required
+def office_list(request):
+    movements = StockMovement.objects.filter(movement_type=MovementType.OFFICE).select_related(
+        'product', 'created_by'
+    )
+    page_obj, querystring = paginate(request, movements, per_page=25)
+    return render(
+        request,
+        'kitchen/office/list.html',
+        {'page_obj': page_obj, 'movements': page_obj, 'querystring': querystring},
+    )
+
+
+@login_required
+def office_create(request):
+    form = OfficeIssueForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            record_office(
+                product=form.cleaned_data['product'],
+                quantity=form.cleaned_data['quantity'],
+                note=form.cleaned_data.get('note') or '',
+                user=request.user,
+            )
+            messages.success(request, 'Ofis chiqimi yozildi.')
+            return redirect('office_list')
+        except StockError as exc:
+            messages.error(request, str(exc))
+    return render(
+        request,
+        'kitchen/office/form.html',
         {'form': form},
     )

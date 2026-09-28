@@ -3,6 +3,8 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from urllib.parse import urlencode
+
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -39,6 +41,7 @@ from kitchen.services.worker_ops import (
     import_workers_from_workbook,
     update_meal_checkin,
     worker_import_template_response,
+    workers_excel_response,
 )
 from kitchen.utils import paginate, parse_date
 
@@ -122,9 +125,10 @@ def meal_checkin_submit(request):
 # --- Staff: workers + QR + report + board ---
 
 
-@login_required
-def worker_list(request):
+def _workers_queryset(request):
     q = request.GET.get('q', '').strip()
+    department = request.GET.get('department', '').strip()
+    status = request.GET.get('status', 'all').strip() or 'all'
     workers = Worker.objects.all()
     if q:
         workers = workers.filter(
@@ -133,7 +137,31 @@ def worker_list(request):
             | Q(employee_code__icontains=q)
             | Q(department__icontains=q)
         )
+    if department:
+        workers = workers.filter(department__iexact=department)
+    if status == 'active':
+        workers = workers.filter(is_active=True)
+    elif status == 'inactive':
+        workers = workers.filter(is_active=False)
+    return workers, q, department, status
+
+
+def _worker_departments():
+    return list(
+        Worker.objects.exclude(department='')
+        .order_by('department')
+        .values_list('department', flat=True)
+        .distinct()
+    )
+
+
+@login_required
+def worker_list(request):
+    workers, q, department, status = _workers_queryset(request)
     page_obj, querystring = paginate(request, workers, per_page=40)
+    export_qs = urlencode({k: v for k, v in {
+        'q': q, 'department': department, 'status': status,
+    }.items() if v})
     return render(
         request,
         'kitchen/meals/workers.html',
@@ -141,10 +169,22 @@ def worker_list(request):
             'page_obj': page_obj,
             'workers': page_obj,
             'q': q,
+            'department': department,
+            'status': status,
+            'departments': _worker_departments(),
             'querystring': querystring,
+            'export_qs': export_qs,
             'active_count': Worker.objects.filter(is_active=True).count(),
+            'total_count': workers.count(),
         },
     )
+
+
+@login_required
+@require_GET
+def worker_export(request):
+    workers, _, _, _ = _workers_queryset(request)
+    return workers_excel_response(workers)
 
 
 @login_required
@@ -243,15 +283,32 @@ def meal_qr_door_download(request):
 @login_required
 def meal_today(request):
     day = parse_date(request.GET.get('date'), timezone.localdate())
-    board = build_today_board(day)
+    meal_type = request.GET.get('meal_type', '').strip()
+    department = request.GET.get('department', '').strip()
+    q = request.GET.get('q', '').strip()
+    board = build_today_board(day, meal_type=meal_type, department=department, q=q)
     form = StaffMealCheckinForm(initial={'served_on': day, 'meal_type': suggest_meal_type()})
+    live_params = {'date': day.isoformat(), 'partial': '1'}
+    if meal_type:
+        live_params['meal_type'] = meal_type
+    if department:
+        live_params['department'] = department
+    if q:
+        live_params['q'] = q
+    context = {
+        'board': board,
+        'form': form,
+        'selected_day': day,
+        'selected_meal': meal_type,
+        'department': department,
+        'q': q,
+        'departments': _worker_departments(),
+        'meal_choices': MealCheckin.MEAL_CHOICES,
+        'live_query': urlencode(live_params),
+    }
     if request.headers.get('HX-Request') == 'true' and request.GET.get('partial') == '1':
-        return render(request, 'kitchen/meals/partials/today_live.html', {'board': board})
-    return render(
-        request,
-        'kitchen/meals/today.html',
-        {'board': board, 'form': form, 'selected_day': day},
-    )
+        return render(request, 'kitchen/meals/partials/today_live.html', context)
+    return render(request, 'kitchen/meals/today.html', context)
 
 
 @login_required

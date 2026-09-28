@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 {% load humanize kitchen_tags %}
-{% block title %}Chiqindi — Oshxona{% endblock %}
-{% block page_title %}Chiqindi / buzilish{% endblock %}
-{% block page_subtitle %}Allohida rasxod turi{% endblock %}
+{% block title %}Ofis chiqimi — Oshxona{% endblock %}
+{% block page_title %}Ofis chiqimi{% endblock %}
+{% block page_subtitle %}Oshxona chiqindisi va pishirishdan alohida{% endblock %}
 {% block content %}
 <div class="toolbar">
-  <a class="btn" href="{% url 'waste_create' %}">Yozish</a>
-  <a class="btn btn-ghost" href="{% url 'office_list' %}">Ofis chiqimi</a>
+  <a class="btn" href="{% url 'office_create' %}">Yozish</a>
+  <a class="btn btn-ghost" href="{% url 'waste_list' %}">Chiqindi</a>
 </div>
 <div class="panel">
   <div class="table-scroll-hint">Jadvalni gorizontal surib ko‘ring →</div>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>O‘rtacha narx</th><th>Summa</th><th>Sabab</th><th></th></tr></thead>
+      <thead><tr><th>Sana</th><th>Mahsulot</th><th>Miqdor</th><th>O‘rtacha narx</th><th>Summa</th><th>Izoh</th></tr></thead>
       <tbody>
         {% for m in movements %}
         <tr>
@@ -21,11 +21,10 @@
           <td>{{ m.quantity|smart_qty }} {{ m.product.unit }}</td>
           <td>{{ m.unit_cost|floatformat:0|intcomma }}</td>
           <td>{{ m.total_cost|floatformat:0|intcomma }}</td>
-          <td>{{ m.note }}</td>
-          <td><a class="btn btn-ghost btn-sm" href="{% url 'movement_detail' m.pk %}">Partiyalar</a></td>
+          <td>{{ m.note|default:"—" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="empty">Yozuv yo‘q</td></tr>
+        <tr><td colspan="6" class="empty">Ofis chiqimi yo‘q</td></tr>
         {% endfor %}
       </tbody>
     </table>

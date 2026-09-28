@@ -196,6 +196,12 @@ class AdjustStockForm(StyledFormMixin, forms.Form):
     note = forms.CharField(required=False, label='Sabab')
 
 
+class OfficeIssueForm(StyledFormMixin, forms.Form):
+    product = forms.ModelChoiceField(queryset=Product.objects.filter(is_active=True), label='Mahsulot')
+    quantity = forms.DecimalField(min_value=0.001, decimal_places=3, max_digits=12, label='Miqdor')
+    note = forms.CharField(required=False, label='Izoh', help_text='Masalan: ofis choy, qog‘oz, suv')
+
+
 class WasteForm(StyledFormMixin, forms.Form):
     REASONS = [
         ('Buzildi', 'Buzildi'),

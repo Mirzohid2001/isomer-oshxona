@@ -10,10 +10,22 @@
     <a class="btn btn-ghost" href="{% url 'meal_today' %}">Bugungi doska</a>
     <a class="btn btn-ghost" href="{% url 'meal_qr_poster' %}">QR kod</a>
     <a class="btn btn-ghost" href="{% url 'meal_report' %}">Ovqat otchoti</a>
+    <a class="btn btn-ghost" href="{% url 'worker_export' %}{% if export_qs %}?{{ export_qs }}{% endif %}">Excel</a>
   </div>
   <form method="get" class="toolbar-form">
-    <input class="form-input" type="search" name="q" value="{{ q }}" placeholder="Qidiruv">
-    <button class="btn btn-ghost" type="submit">Topish</button>
+    <input class="form-input" type="search" name="q" value="{{ q }}" placeholder="Ism, familiya, kod">
+    <select class="form-select" name="department">
+      <option value="">Barcha bo‘limlar</option>
+      {% for dept in departments %}
+      <option value="{{ dept }}" {% if department == dept %}selected{% endif %}>{{ dept }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-select" name="status">
+      <option value="all" {% if status == 'all' %}selected{% endif %}>Barcha holat</option>
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Faol</option>
+      <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>O‘chiq</option>
+    </select>
+    <button class="btn btn-ghost" type="submit">Filter</button>
   </form>
 </div>
 <div class="panel">
